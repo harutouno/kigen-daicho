@@ -1,0 +1,375 @@
+{
+  "soon_days": 30,
+  "upcoming_days": 60,
+  "requirements": [
+    {
+      "id": "req-kanri-cert",
+      "name": "監理技術者資格者証",
+      "category": "qualification",
+      "obligation": "legal",
+      "date_mode": "fixed",
+      "cycle_months": null,
+      "source": "建設業法。資格者証の有効期間は5年。",
+      "note": "有効期限は資格者証に記載されている。台帳では証面の期限をそのまま登録し、計算で置き換えない。"
+    },
+    {
+      "id": "req-kanri-course",
+      "name": "監理技術者講習",
+      "category": "qualification",
+      "obligation": "legal",
+      "date_mode": "fixed",
+      "cycle_months": null,
+      "source": "建設業法施行規則。令和3年1月1日改正により、有効期間は受講日の翌年1月1日から5年後の12月31日まで。",
+      "note": "資格者証とは別に期限が進む。数え方が特殊で手計算を誤りやすいため、修了証に記載の期限を登録する。現場配置には資格者証と講習の両方が有効であることが必要。"
+    },
+    {
+      "id": "req-den1-course",
+      "name": "第一種電気工事士 定期講習",
+      "category": "qualification",
+      "obligation": "legal",
+      "date_mode": "cycle",
+      "cycle_months": 60,
+      "source": "電気工事士法。免状交付後、5年以内ごとに受講。",
+      "note": "免状そのものに有効期限はない。期限が来るのはこの講習の側。"
+    },
+    {
+      "id": "req-kikenbutsu-course",
+      "name": "危険物取扱者 保安講習",
+      "category": "qualification",
+      "obligation": "legal",
+      "date_mode": "cycle",
+      "cycle_months": 36,
+      "source": "消防法。取扱作業に従事している者は原則3年ごと。",
+      "note": "正確には前回講習以後の最初の4月1日から3年以内。台帳では前回受講日からの周期で概算し、年度末付近は個別に確認する。"
+    },
+    {
+      "id": "req-kenshin",
+      "name": "定期健康診断",
+      "category": "qualification",
+      "obligation": "legal",
+      "date_mode": "cycle",
+      "cycle_months": 12,
+      "source": "労働安全衛生法。年1回。",
+      "note": "安全書類の差し戻し原因として、実施日の年度跨ぎが挙げられる。提出予定日での判定が必要。"
+    },
+    {
+      "id": "req-driver-license",
+      "name": "運転免許証",
+      "category": "qualification",
+      "obligation": "legal",
+      "date_mode": "fixed",
+      "cycle_months": null,
+      "source": "道路交通法。区分により3年または5年。",
+      "note": "更新区分が人により異なるため周期では決まらない。免許証記載の有効期限を登録する。"
+    },
+    {
+      "id": "req-shokucho-koujou",
+      "name": "職長・安全衛生責任者 能力向上教育",
+      "category": "qualification",
+      "obligation": "effort",
+      "date_mode": "cycle",
+      "cycle_months": 60,
+      "source": "労働安全衛生法に基づく指針。概ね5年ごと。",
+      "note": "法令上の義務ではなく努力義務。元請から求められる場合があるため台帳に載せる。"
+    },
+    {
+      "id": "req-den1-menjo",
+      "name": "第一種電気工事士 免状",
+      "category": "qualification",
+      "obligation": "none",
+      "date_mode": "none",
+      "cycle_months": null,
+      "source": "電気工事士法。免状に有効期限はない。",
+      "note": "誰が持っているかの把握のために登録する。期限は発生しない。"
+    },
+    {
+      "id": "req-shunin-menjo",
+      "name": "電気主任技術者 免状",
+      "category": "qualification",
+      "obligation": "none",
+      "date_mode": "none",
+      "cycle_months": null,
+      "source": "電気事業法。免状に有効期限はない。",
+      "note": "誰が持っているかの把握のために登録する。期限は発生しない。"
+    },
+    {
+      "id": "req-monthly-check",
+      "name": "自家用電気工作物 月次点検",
+      "category": "inspection",
+      "obligation": "legal",
+      "date_mode": "cycle",
+      "cycle_months": 1,
+      "source": "電気事業法。毎月または隔月（保安規程・外部委託承認の条件による）。",
+      "note": "周期は設備ごとの条件で変わるため、種別を複製して設備ごとに周期を設定できる。"
+    },
+    {
+      "id": "req-annual-check",
+      "name": "自家用電気工作物 年次点検",
+      "category": "inspection",
+      "obligation": "legal",
+      "date_mode": "cycle",
+      "cycle_months": 12,
+      "source": "電気事業法。原則年1回。信頼性の高い機器では3年に1回となる場合がある。",
+      "note": "停電を伴うため日程調整が必要で、後ろ倒しになりやすい。"
+    },
+    {
+      "id": "req-instrument-cal",
+      "name": "測定機器の校正",
+      "category": "inspection",
+      "obligation": "contract",
+      "date_mode": "cycle",
+      "cycle_months": 12,
+      "source": "ISO 9001:2015 7.1.5 監視及び測定のための資源。",
+      "note": "法令ではなく規格の要求。周期は社内規程で定める。校正切れの機器で測定した記録は成績書として使えない。"
+    },
+    {
+      "id": "req-iso-audit",
+      "name": "内部監査",
+      "category": "inspection",
+      "obligation": "contract",
+      "date_mode": "cycle",
+      "cycle_months": 12,
+      "source": "ISO 9001:2015 9.2 内部監査。",
+      "note": "認証を維持している以上、計画された間隔で実施する必要がある。"
+    }
+  ],
+  "subjects": [
+    { "id": "p-01", "name": "山口 直人", "kind": "person", "site": "本社", "role": "施工管理" },
+    { "id": "p-02", "name": "迫田 和樹", "kind": "person", "site": "川内支店", "role": "施工管理" },
+    { "id": "p-03", "name": "東 亮", "kind": "person", "site": "国分支店", "role": "電気工事" },
+    { "id": "p-04", "name": "前田 修司", "kind": "person", "site": "志布志支店", "role": "電気工事" },
+    { "id": "p-05", "name": "川畑 悠", "kind": "person", "site": "姶良支店", "role": "電気工事" },
+    { "id": "p-06", "name": "有村 千尋", "kind": "person", "site": "本社", "role": "保守・計装" },
+    { "id": "a-01", "name": "みなみ浄水場 受変電設備", "kind": "asset", "site": "本社", "role": "顧客設備" },
+    { "id": "a-02", "name": "きたうら中継ポンプ場 受変電設備", "kind": "asset", "site": "川内支店", "role": "顧客設備" },
+    { "id": "a-03", "name": "絶縁抵抗計 No.3", "kind": "asset", "site": "本社", "role": "測定機器" },
+    { "id": "a-04", "name": "接地抵抗計 No.1", "kind": "asset", "site": "国分支店", "role": "測定機器" },
+    { "id": "a-05", "name": "クランプメータ No.7", "kind": "asset", "site": "本社", "role": "測定機器" },
+    { "id": "a-99", "name": "全社（品質マネジメントシステム）", "kind": "asset", "site": "本社", "role": "管理システム" }
+  ],
+  "holdings": [
+    {
+      "id": "h-001",
+      "subject_id": "p-02",
+      "requirement_id": "req-kanri-cert",
+      "fixed_due_on": "2027-03-31",
+      "records": [],
+      "note": "資格者証は有効。"
+    },
+    {
+      "id": "h-002",
+      "subject_id": "p-02",
+      "requirement_id": "req-kanri-course",
+      "fixed_due_on": "2026-07-31",
+      "records": [],
+      "note": "資格者証は生きているが講習が切れている。監理技術者としては配置できない。"
+    },
+    {
+      "id": "h-003",
+      "subject_id": "p-01",
+      "requirement_id": "req-kanri-cert",
+      "fixed_due_on": "2029-11-30",
+      "records": [],
+      "note": ""
+    },
+    {
+      "id": "h-004",
+      "subject_id": "p-01",
+      "requirement_id": "req-kanri-course",
+      "fixed_due_on": "2029-12-31",
+      "records": [],
+      "note": ""
+    },
+    {
+      "id": "h-005",
+      "subject_id": "p-01",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [{ "done_on": "2025-09-10", "done_by": "総務", "memo": "定期健診" }],
+      "note": ""
+    },
+    {
+      "id": "h-006",
+      "subject_id": "p-02",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [{ "done_on": "2026-02-18", "done_by": "総務", "memo": "定期健診" }],
+      "note": ""
+    },
+    {
+      "id": "h-007",
+      "subject_id": "p-03",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [{ "done_on": "2026-06-02", "done_by": "総務", "memo": "定期健診" }],
+      "note": ""
+    },
+    {
+      "id": "h-008",
+      "subject_id": "p-04",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [{ "done_on": "2025-10-15", "done_by": "総務", "memo": "定期健診" }],
+      "note": ""
+    },
+    {
+      "id": "h-009",
+      "subject_id": "p-05",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [{ "done_on": "2026-05-21", "done_by": "総務", "memo": "定期健診" }],
+      "note": ""
+    },
+    {
+      "id": "h-010",
+      "subject_id": "p-06",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [{ "done_on": "2026-07-08", "done_by": "総務", "memo": "定期健診" }],
+      "note": ""
+    },
+    {
+      "id": "h-011",
+      "subject_id": "p-03",
+      "requirement_id": "req-den1-course",
+      "fixed_due_on": null,
+      "records": [],
+      "note": "免状は保有しているが、前回の定期講習の受講日が台帳に無い。期日を確定できない。"
+    },
+    {
+      "id": "h-012",
+      "subject_id": "p-03",
+      "requirement_id": "req-den1-menjo",
+      "fixed_due_on": null,
+      "records": [],
+      "note": "免状に期限は無い。保有の記録として登録。"
+    },
+    {
+      "id": "h-013",
+      "subject_id": "p-01",
+      "requirement_id": "req-den1-course",
+      "fixed_due_on": null,
+      "records": [{ "done_on": "2023-11-14", "done_by": "本人", "memo": "定期講習" }],
+      "note": ""
+    },
+    {
+      "id": "h-014",
+      "subject_id": "p-05",
+      "requirement_id": "req-den1-course",
+      "fixed_due_on": null,
+      "records": [{ "done_on": "2021-10-05", "done_by": "本人", "memo": "定期講習" }],
+      "note": ""
+    },
+    {
+      "id": "h-015",
+      "subject_id": "p-06",
+      "requirement_id": "req-shunin-menjo",
+      "fixed_due_on": null,
+      "records": [],
+      "note": "第三種電気主任技術者。期限は無い。"
+    },
+    {
+      "id": "h-016",
+      "subject_id": "p-04",
+      "requirement_id": "req-driver-license",
+      "fixed_due_on": "2026-10-20",
+      "records": [],
+      "note": ""
+    },
+    {
+      "id": "h-017",
+      "subject_id": "p-05",
+      "requirement_id": "req-driver-license",
+      "fixed_due_on": "2028-04-11",
+      "records": [],
+      "note": ""
+    },
+    {
+      "id": "h-018",
+      "subject_id": "p-04",
+      "requirement_id": "req-kikenbutsu-course",
+      "fixed_due_on": null,
+      "records": [{ "done_on": "2023-09-27", "done_by": "本人", "memo": "保安講習" }],
+      "note": "自家発電設備の燃料取扱に従事。"
+    },
+    {
+      "id": "h-019",
+      "subject_id": "p-02",
+      "requirement_id": "req-shokucho-koujou",
+      "fixed_due_on": null,
+      "records": [{ "done_on": "2022-06-15", "done_by": "本人", "memo": "能力向上教育" }],
+      "note": ""
+    },
+    {
+      "id": "h-020",
+      "subject_id": "a-01",
+      "requirement_id": "req-monthly-check",
+      "fixed_due_on": null,
+      "records": [
+        { "done_on": "2026-06-04", "done_by": "有村", "memo": "" },
+        { "done_on": "2026-07-06", "done_by": "有村", "memo": "" },
+        { "done_on": "2026-08-05", "done_by": "有村", "memo": "" }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-021",
+      "subject_id": "a-01",
+      "requirement_id": "req-annual-check",
+      "fixed_due_on": null,
+      "records": [{ "done_on": "2025-11-12", "done_by": "有村", "memo": "停電作業" }],
+      "note": ""
+    },
+    {
+      "id": "h-022",
+      "subject_id": "a-02",
+      "requirement_id": "req-monthly-check",
+      "fixed_due_on": null,
+      "records": [
+        { "done_on": "2026-06-18", "done_by": "東", "memo": "" },
+        { "done_on": "2026-07-21", "done_by": "東", "memo": "" }
+      ],
+      "note": "8月分が未実施。"
+    },
+    {
+      "id": "h-023",
+      "subject_id": "a-02",
+      "requirement_id": "req-annual-check",
+      "fixed_due_on": null,
+      "records": [{ "done_on": "2026-03-09", "done_by": "東", "memo": "停電作業" }],
+      "note": ""
+    },
+    {
+      "id": "h-024",
+      "subject_id": "a-03",
+      "requirement_id": "req-instrument-cal",
+      "fixed_due_on": null,
+      "records": [{ "done_on": "2025-09-19", "done_by": "外部委託", "memo": "校正証明書あり" }],
+      "note": ""
+    },
+    {
+      "id": "h-025",
+      "subject_id": "a-04",
+      "requirement_id": "req-instrument-cal",
+      "fixed_due_on": null,
+      "records": [{ "done_on": "2026-01-23", "done_by": "外部委託", "memo": "校正証明書あり" }],
+      "note": ""
+    },
+    {
+      "id": "h-026",
+      "subject_id": "a-05",
+      "requirement_id": "req-instrument-cal",
+      "fixed_due_on": null,
+      "records": [],
+      "note": "購入後、校正の記録が台帳に無い。期日を確定できない。"
+    },
+    {
+      "id": "h-027",
+      "subject_id": "a-99",
+      "requirement_id": "req-iso-audit",
+      "fixed_due_on": null,
+      "records": [{ "done_on": "2025-10-28", "done_by": "品質管理課", "memo": "第46期内部監査" }],
+      "note": ""
+    }
+  ]
+}
