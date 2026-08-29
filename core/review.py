@@ -25,7 +25,27 @@ from core.schedule import (
     status_of,
 )
 
-__all__ = ["Row", "build_rows", "submission_check", "assignment_check", "summarize"]
+__all__ = [
+    "Row",
+    "SubjectSummary",
+    "build_rows",
+    "summarize_by_subject",
+    "submission_check",
+    "assignment_check",
+    "summarize",
+]
+
+# 画面に出す順番。悪いものほど小さい値。
+#
+# 超過を未確定より先に出す。未確定の方が実態としては危ないこともあるが、
+# 超過は「今日その人を現場に出せない」ので、先に手を付ける必要があるため。
+STATUS_ORDER: dict[Status, int] = {
+    "overdue": 0,
+    "unknown": 1,
+    "due_soon": 2,
+    "upcoming": 3,
+    "ok": 4,
+}
 
 
 @dataclass(frozen=True)
@@ -85,6 +105,100 @@ def build_rows(ledger: Ledger, as_of: date) -> list[Row]:
         return (1, row.due_on)
 
     return sorted(rows, key=sort_key)
+
+
+@dataclass(frozen=True)
+class SubjectSummary:
+    """1 人（または 1 台）を 1 枚のカードに出すための集約。"""
+
+    subject: Subject
+    rows: list[Row]
+    worst: Status
+    cause_due_on: date | None
+    cause_days_left: int | None
+    cause: Row | None
+    other_action_count: int
+
+    @property
+    def needs_action(self) -> bool:
+        """今日この人に手を付ける必要があるか。
+
+        画面には手を付けるべきものだけを出し、それ以外は畳む。
+        「予告」（まだ先だが期日が見えている）は今日やることが無いので畳む側に入れる。
+        """
+        return self.worst in ("overdue", "unknown", "due_soon")
+
+
+def summarize_by_subject(
+    ledger: Ledger,
+    as_of: date,
+    *,
+    kind: str | None = None,
+) -> list[SubjectSummary]:
+    """対象ごとにまとめ、悪い順に並べて返す。
+
+    並び順の規則:
+      1. その人が持つ中で最も悪い状態（超過 → 未確定 → 間近 → 予告 → 問題なし）
+      2. 同じ状態なら期日が近い順
+      3. 期日が無いものは名前順
+
+    期限を持たない種別（有効期限の無い免状など）は、状態の判定に数えない。
+    期限が存在しないことを「未確定」として扱うと、把握できていない行が埋もれるため。
+    """
+    rows = build_rows(ledger, as_of)
+
+    by_subject: dict[str, list[Row]] = {}
+    for row in rows:
+        by_subject.setdefault(row.subject.id, []).append(row)
+
+    summaries: list[SubjectSummary] = []
+    for subject in ledger.subjects:
+        if kind is not None and subject.kind != kind:
+            continue
+
+        owned = by_subject.get(subject.id, [])
+        judged = [r for r in owned if r.requirement.has_deadline]
+
+        worst: Status = "ok"
+        for row in judged:
+            if STATUS_ORDER[row.status] < STATUS_ORDER[worst]:
+                worst = row.status
+
+        # カードには「最も悪い状態」を作り出している当の行を出す。
+        # 状態と期日を別々の行から拾うと、「日付が未入力」と言いながら
+        # 期日が出ている、という矛盾したカードになるため。
+        same_status = [r for r in judged if r.status == worst]
+        dated = [r for r in same_status if r.due_on is not None]
+        if dated:
+            cause = min(dated, key=lambda r: r.due_on)  # type: ignore[arg-type,return-value]
+        elif same_status:
+            cause = same_status[0]
+        else:
+            cause = None
+
+        acting = [r for r in judged if r.blocks_assignment or r.status == "due_soon"]
+        others = max(len(acting) - 1, 0) if cause is not None else len(acting)
+
+        summaries.append(
+            SubjectSummary(
+                subject=subject,
+                rows=owned,
+                worst=worst,
+                cause_due_on=cause.due_on if cause else None,
+                cause_days_left=cause.days_left if cause else None,
+                cause=cause,
+                other_action_count=others,
+            )
+        )
+
+    def sort_key(s: SubjectSummary) -> tuple[int, date, str]:
+        return (
+            STATUS_ORDER[s.worst],
+            s.cause_due_on or date.max,
+            s.subject.name,
+        )
+
+    return sorted(summaries, key=sort_key)
 
 
 def submission_check(

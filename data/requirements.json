@@ -1,0 +1,132 @@
+[
+  {
+    "id": "req-kanri-cert",
+    "name": "監理技術者資格者証",
+    "category": "qualification",
+    "obligation": "legal",
+    "date_mode": "fixed",
+    "cycle_months": null,
+    "source": "建設業法。資格者証の有効期間は5年。",
+    "note": "有効期限は資格者証に記載されている。台帳では証面の期限をそのまま登録し、計算で置き換えない。"
+  },
+  {
+    "id": "req-kanri-course",
+    "name": "監理技術者講習",
+    "category": "qualification",
+    "obligation": "legal",
+    "date_mode": "fixed",
+    "cycle_months": null,
+    "source": "建設業法施行規則。令和3年1月1日改正により、有効期間は受講日の翌年1月1日から5年後の12月31日まで。",
+    "note": "資格者証とは別に期限が進む。数え方が特殊で手計算を誤りやすいため、修了証に記載の期限を登録する。現場配置には資格者証と講習の両方が有効であることが必要。"
+  },
+  {
+    "id": "req-den1-course",
+    "name": "第一種電気工事士 定期講習",
+    "category": "qualification",
+    "obligation": "legal",
+    "date_mode": "cycle",
+    "cycle_months": 60,
+    "source": "電気工事士法。免状交付後、5年以内ごとに受講。",
+    "note": "免状そのものに有効期限はない。期限が来るのはこの講習の側。"
+  },
+  {
+    "id": "req-kikenbutsu-course",
+    "name": "危険物取扱者 保安講習",
+    "category": "qualification",
+    "obligation": "legal",
+    "date_mode": "cycle",
+    "cycle_months": 36,
+    "source": "消防法。取扱作業に従事している者は原則3年ごと。",
+    "note": "正確には前回講習以後の最初の4月1日から3年以内。台帳では前回受講日からの周期で概算し、年度末付近は個別に確認する。"
+  },
+  {
+    "id": "req-kenshin",
+    "name": "定期健康診断",
+    "category": "qualification",
+    "obligation": "legal",
+    "date_mode": "cycle",
+    "cycle_months": 12,
+    "source": "労働安全衛生法。年1回。",
+    "note": "安全書類の差し戻し原因として、実施日の年度跨ぎが挙げられる。提出予定日での判定が必要。"
+  },
+  {
+    "id": "req-driver-license",
+    "name": "運転免許証",
+    "category": "qualification",
+    "obligation": "legal",
+    "date_mode": "fixed",
+    "cycle_months": null,
+    "source": "道路交通法。区分により3年または5年。",
+    "note": "更新区分が人により異なるため周期では決まらない。免許証記載の有効期限を登録する。"
+  },
+  {
+    "id": "req-shokucho-koujou",
+    "name": "職長・安全衛生責任者 能力向上教育",
+    "category": "qualification",
+    "obligation": "effort",
+    "date_mode": "cycle",
+    "cycle_months": 60,
+    "source": "労働安全衛生法に基づく指針。概ね5年ごと。",
+    "note": "法令上の義務ではなく努力義務。元請から求められる場合があるため台帳に載せる。"
+  },
+  {
+    "id": "req-den1-menjo",
+    "name": "第一種電気工事士 免状",
+    "category": "qualification",
+    "obligation": "none",
+    "date_mode": "none",
+    "cycle_months": null,
+    "source": "電気工事士法。免状に有効期限はない。",
+    "note": "誰が持っているかの把握のために登録する。期限は発生しない。"
+  },
+  {
+    "id": "req-shunin-menjo",
+    "name": "電気主任技術者 免状",
+    "category": "qualification",
+    "obligation": "none",
+    "date_mode": "none",
+    "cycle_months": null,
+    "source": "電気事業法。免状に有効期限はない。",
+    "note": "誰が持っているかの把握のために登録する。期限は発生しない。"
+  },
+  {
+    "id": "req-monthly-check",
+    "name": "自家用電気工作物 月次点検",
+    "category": "inspection",
+    "obligation": "legal",
+    "date_mode": "cycle",
+    "cycle_months": 1,
+    "source": "電気事業法。毎月または隔月（保安規程・外部委託承認の条件による）。",
+    "note": "周期は設備ごとの条件で変わるため、種別を複製して設備ごとに周期を設定できる。"
+  },
+  {
+    "id": "req-annual-check",
+    "name": "自家用電気工作物 年次点検",
+    "category": "inspection",
+    "obligation": "legal",
+    "date_mode": "cycle",
+    "cycle_months": 12,
+    "source": "電気事業法。原則年1回。信頼性の高い機器では3年に1回となる場合がある。",
+    "note": "停電を伴うため日程調整が必要で、後ろ倒しになりやすい。"
+  },
+  {
+    "id": "req-instrument-cal",
+    "name": "測定機器の校正",
+    "category": "inspection",
+    "obligation": "contract",
+    "date_mode": "cycle",
+    "cycle_months": 12,
+    "source": "ISO 9001:2015 7.1.5 監視及び測定のための資源。",
+    "note": "法令ではなく規格の要求。周期は社内規程で定める。校正切れの機器で測定した記録は成績書として使えない。"
+  },
+  {
+    "id": "req-iso-audit",
+    "name": "内部監査",
+    "category": "inspection",
+    "obligation": "contract",
+    "date_mode": "cycle",
+    "cycle_months": 12,
+    "source": "ISO 9001:2015 9.2 内部監査。",
+    "note": "認証を維持している以上、計画された間隔で実施する必要がある。"
+  }
+]

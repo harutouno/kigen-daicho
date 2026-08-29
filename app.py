@@ -1,338 +1,337 @@
-"""期限台帳 — 安全書類が差し戻される原因を、出す前に潰すための台帳。
+"""期限台帳 — 人の期限確認。
 
-画面はドメイン層（core/）の薄い皮として作る。
-期日の決め方と判定はすべて core 側にあり、この層には計算を置かない。
+画面はドメイン層（core/）の薄い皮として作る。期日の決め方と判定はすべて core 側にあり、
+この層には計算を置かない。
+
+画面の決まりごと:
+  * 折りたたまない。押す先はすべて最初から見えている状態にする。
+  * 状態を色だけで表さない。色の隣に必ず言葉を置く。
+  * 危険なものほど上・左に来る。並びは 期限切れ → 日付未入力 → 期限間近。
+  * 期日を計算できないものを「問題なし」に見せない。
+  * まだ作っていない操作は、押せる状態で置かない。無効にして理由を書く。
 """
 
 from __future__ import annotations
 
-import io
 from datetime import date
 
-import pandas as pd
 import streamlit as st
 
-from core.models import (
-    CATEGORY_LABEL,
-    DATE_MODE_LABEL,
-    OBLIGATION_LABEL,
-    Ledger,
-    Record,
-)
-from core.review import Row, assignment_check, build_rows, submission_check, summarize
-from core.schedule import STATUS_LABEL, ScheduleError, validate_done_on
+from core.models import CATEGORY_LABEL, OBLIGATION_LABEL, Record
+from core.review import SubjectSummary, build_rows, summarize_by_subject
+from core.schedule import ScheduleError, validate_done_on
 from core.store import SEED_PATH, load_ledger
-
-STATUS_MARK = {
-    "overdue": "🔴 超過",
-    "unknown": "⚪ 未確定",
-    "due_soon": "🟠 間近",
-    "upcoming": "🟡 予告",
-    "ok": "🟢 余裕",
-}
 
 st.set_page_config(page_title="期限台帳", page_icon="📋", layout="wide")
 
+CARDS_PER_ROW = 3
 
-# --- 状態 -----------------------------------------------------------------
+SECTIONS: list[tuple[str, str, str, str]] = [
+    ("overdue", "🔴", "期限切れ", "期限を過ぎています"),
+    ("unknown", "⚪", "日付未入力・期限計算不可", "前回日が未入力で計算できません"),
+    ("due_soon", "🟠", "期限間近（30日以内）", "30日以内に期限が来ます"),
+]
+SECTION_BY_STATUS = {key: (mark, label, note) for key, mark, label, note in SECTIONS}
+
+STATUS_TEXT: dict[str, str] = {
+    "overdue": "🔴 期限切れ",
+    "unknown": "⚪ 日付未入力",
+    "due_soon": "🟠 期限間近",
+    "upcoming": "🟢 問題なし",
+    "ok": "🟢 問題なし",
+}
+
+NOT_BUILT = "この機能はまだ作っていません"
 
 
-def ledger() -> Ledger:
+def jp_date(d: date) -> str:
+    """2026年7月31日 の形。利用者が読み慣れた並びにする。"""
+    return f"{d.year}年{d.month}月{d.day}日"
+
+
+def remaining_text(days: int | None) -> str:
+    if days is None:
+        return ""
+    if days < 0:
+        return f"（{-days}日 超過）"
+    return f"（あと{days}日）"
+
+
+def ledger():
     if "ledger" not in st.session_state:
         st.session_state.ledger = load_ledger(SEED_PATH)
     return st.session_state.ledger
 
 
-def rows_frame(rows: list[Row]) -> pd.DataFrame:
-    frame = pd.DataFrame(
-        [
-            {
-                "状態": STATUS_MARK[r.status],
-                "対象": r.subject.name,
-                "拠点": r.subject.site,
-                "種別": r.requirement.name,
-                "区分": OBLIGATION_LABEL[r.requirement.obligation],
-                "期日": r.due_on.isoformat() if r.due_on else "—",
-                # 未確定は欠損として保持する。0 や文字列で埋めると数値として扱えなくなる。
-                "残日数": pd.NA if r.days_left is None else r.days_left,
-                "前回実施": (
-                    r.holding.last_done_on.isoformat() if r.holding.last_done_on else "—"
-                ),
-                "備考": r.holding.note,
-            }
-            for r in rows
-        ]
-    )
-    if not frame.empty:
-        frame["残日数"] = frame["残日数"].astype("Int64")
-    return frame
+# --- 前の操作の後始末 -----------------------------------------------------
+# ウィジェットが作られたあとに session_state を書き換えられないため、
+# ボタンで表示範囲を変える要求は、次の実行の先頭でここに反映する。
+
+if st.session_state.pop("_request_show_all", False):
+    st.session_state["scope"] = "全員"
+
+# 記録直後に画面を作り直すため、その場で出したメッセージは消えてしまう。
+# 次の実行に持ち越して表示する。何も言われないと、記録できたのか分からない。
+_flash = st.session_state.pop("_flash", None)
 
 
-# --- サイドバー -----------------------------------------------------------
+def draw_card(summary: SubjectSummary, slot) -> None:
+    """カード 1 枚。状態を作り出している資格そのものを出す。"""
+    # 見出しには「期限間近（30日以内）」と出すが、カードの中は幅が狭いので短い方を使う。
+    with slot.container(border=True):
+        st.markdown(f"##### {summary.subject.name}")
+        st.caption(f"{summary.subject.site} ／ {summary.subject.role}")
+        st.markdown(f"**{STATUS_TEXT[summary.worst]}**")
+
+        cause = summary.cause
+        if cause is None:
+            st.write("対応が必要な項目はありません")
+        else:
+            st.markdown(f"**{cause.requirement.name}**")
+            if cause.due_on is None:
+                st.write("前回の日付を入力してください")
+            else:
+                st.write(
+                    f"期限：{jp_date(cause.due_on)} {remaining_text(cause.days_left)}"
+                )
+
+        st.caption(f"ほかに対応が必要な項目：{summary.other_action_count}件")
+        if st.button(
+            "資格・健診を確認",
+            key=f"open-{summary.subject.id}",
+            width="stretch",
+        ):
+            st.session_state["selected"] = summary.subject.id
+
+
+# --- 左サイドバー ---------------------------------------------------------
 
 with st.sidebar:
-    st.header("表示条件")
+    st.markdown("### 期限台帳")
+    st.caption("資格・講習・健診・点検の期限を管理します")
 
-    as_of = st.date_input(
-        "基準日",
-        value=date.today(),
-        help="この日付の時点で判定します。今日以外の日を入れられることがこの台帳の要点です。",
+    st.markdown("**メニュー**")
+    nav = st.radio(
+        "メニュー",
+        ["人", "道具・機器", "安全書類の提出前チェック", "種類の設定"],
+        label_visibility="collapsed",
+        key="nav",
     )
 
-    lg = ledger()
-
-    sites = ["すべて"] + lg.sites
-    site = st.selectbox("拠点", sites)
-
-    category = st.selectbox(
-        "区分", ["すべて", "資格・講習・健診", "点検・校正"]
-    )
+    st.markdown("**登録**")
+    st.button("社員を登録", width="stretch", key="btn-add-person", disabled=True)
+    st.button("社員に資格・講習を追加", width="stretch", key="btn-add-qual", disabled=True)
+    st.caption("※ 登録はまだ作っていません")
 
     st.divider()
-    st.caption("警告のしきい値")
-    lg.soon_days = st.number_input("『間近』とする日数", 1, 365, lg.soon_days)
-    lg.upcoming_days = st.number_input("『予告』とする日数", 1, 730, lg.upcoming_days)
-    if lg.soon_days > lg.upcoming_days:
-        st.error("『間近』は『予告』以下にしてください。")
-        st.stop()
-
-    st.divider()
-    if st.button("同梱データに戻す", width="stretch"):
-        st.session_state.ledger = load_ledger(SEED_PATH)
-        st.rerun()
+    st.caption("**使い方で迷ったら**\n\n不明な点は事務所までお問い合わせください。")
 
 
-def filtered(rows: list[Row]) -> list[Row]:
-    out = rows
-    if site != "すべて":
-        out = [r for r in out if r.subject.site == site]
-    if category != "すべて":
-        out = [r for r in out if CATEGORY_LABEL[r.requirement.category] == category]
-    return out
+lg = ledger()
+today = date.today()
+
+if nav != "人":
+    st.title(nav)
+    st.info(f"{NOT_BUILT}。左の「人」を選んでください。")
+    st.stop()
 
 
-# --- 見出し ---------------------------------------------------------------
+# --- 見出しと集計 ---------------------------------------------------------
 
-st.title("期限台帳")
+summaries = summarize_by_subject(lg, today, kind="person")
+
+by_status: dict[str, list[SubjectSummary]] = {key: [] for key, _, _, _ in SECTIONS}
+clear: list[SubjectSummary] = []
+for s in summaries:
+    if s.worst in by_status:
+        by_status[s.worst].append(s)
+    else:
+        clear.append(s)
+
+if _flash:
+    st.success(_flash, icon="✅")
+
+st.title("人の期限確認")
 st.caption(
-    "安全書類が差し戻される原因を、提出する前に洗い出すための台帳です。"
-    "資格・講習・健診の期限と、点検・校正の期日を同じ仕組みで扱います。"
+    "期限切れ → 日付未入力・期限計算不可 → 期限間近 の順に表示します。"
+    "上から順に確認してください。"
 )
 
-st.warning(
-    "**これはデモです。** 社員名・施設名はすべて架空で、実在の個人や顧客とは関係ありません。"
-    "変更はブラウザのセッション内にのみ保持され、保存されません。",
-    icon="⚠️",
-)
+tiles = st.columns(4)
+for (key, mark, label, note), slot in zip(SECTIONS, tiles):
+    with slot.container(border=True):
+        st.markdown(f"{mark} **{label}**")
+        st.markdown(f"# {len(by_status[key])}人")
+        st.caption(note)
+with tiles[3].container(border=True):
+    st.markdown("🟢 **問題なし**")
+    st.markdown(f"# {len(clear)}人")
+    st.caption("期限切れ・期限間近はありません")
 
-all_rows = build_rows(lg, as_of)
-view_rows = filtered(all_rows)
-counts = summarize(view_rows)
 
-c1, c2, c3, c4, c5 = st.columns(5)
-c1.metric("🔴 超過", counts["overdue"])
-c2.metric("⚪ 未確定", counts["unknown"])
-c3.metric("🟠 間近", counts["due_soon"])
-c4.metric("🟡 予告", counts["upcoming"])
-c5.metric("🟢 余裕", counts["ok"])
+# --- 検索と表示範囲 -------------------------------------------------------
 
-st.divider()
+left, right = st.columns([1, 1])
 
-tab_list, tab_submit, tab_assign, tab_master = st.tabs(
-    ["一覧", "提出前チェック", "配置チェック", "種別マスタ"]
-)
+with left:
+    st.markdown("**氏名で検索**　:gray[(表示範囲に関係なく全員から検索します)]")
+    keyword = st.text_input(
+        "氏名で検索",
+        placeholder="例：東 亮",
+        label_visibility="collapsed",
+        key="search",
+    ).strip()
+
+with right:
+    st.markdown("**表示範囲を選んでください**")
+    st.radio(
+        "表示範囲",
+        ["対応が必要な人だけ", "全員"],
+        horizontal=True,
+        label_visibility="collapsed",
+        key="scope",
+        captions=[
+            "期限切れ・期限間近・日付未入力の人を表示",
+            "問題なしの人も含めて全員を表示",
+        ],
+    )
+
+
+def draw_grid(items: list[SubjectSummary]) -> None:
+    for start in range(0, len(items), CARDS_PER_ROW):
+        slots = st.columns(CARDS_PER_ROW)
+        for summary, slot in zip(items[start : start + CARDS_PER_ROW], slots):
+            draw_card(summary, slot)
 
 
 # --- 一覧 -----------------------------------------------------------------
+#
+# 検索は絞り込みを飛び越える。「対応が必要な人だけ」を表示していても、
+# 名前を打てば全員から探す。打ったのに出てこない状態を作らないため。
 
-with tab_list:
-    st.subheader(f"{as_of} 時点の一覧")
-    st.caption(
-        "期日が確定していない行を先頭に出します。放置されやすいのは「切れているもの」より"
-        "「そもそも分かっていないもの」だからです。"
-    )
-
-    if not view_rows:
-        st.info("該当する行がありません。")
+if keyword:
+    hits = [
+        s for s in summaries
+        if keyword in s.subject.name
+        or keyword in s.subject.name.replace(" ", "")
+        or keyword in s.subject.site
+    ]
+    st.markdown(f"##### 🔍 「{keyword}」の検索結果　{len(hits)}人")
+    if hits:
+        st.caption("表示範囲の設定に関係なく、全員から探しています。")
+        draw_grid(hits)
     else:
-        st.dataframe(rows_frame(view_rows), width="stretch", hide_index=True)
+        st.warning(f"「{keyword}」に一致する人は登録されていません。")
+        st.caption(f"※ 新しく登録する機能は{NOT_BUILT}。")
+else:
+    shown_clear = st.session_state.get("scope") == "全員"
 
-        buf = io.StringIO()
-        rows_frame(view_rows).to_csv(buf, index=False)
-        st.download_button(
-            "CSV で書き出す",
-            buf.getvalue().encode("utf-8-sig"),
-            file_name=f"kigen_{as_of}.csv",
-            mime="text/csv",
-        )
+    any_shown = False
+    for key, mark, label, _ in SECTIONS:
+        items = by_status[key]
+        if not items:
+            continue
+        any_shown = True
+        st.markdown(f"##### {mark} {label}　{len(items)}人")
+        draw_grid(items)
 
-    st.divider()
-    st.subheader("実施を記録する")
-    st.caption(
-        "記録を追加すると、次回期日が自動で立ち直します。前回実施日は別に保持せず、"
-        "記録の中の最新日から導出しています。"
-    )
+    if shown_clear and clear:
+        any_shown = True
+        st.markdown(f"##### 🟢 問題なし　{len(clear)}人")
+        draw_grid(clear)
 
-    cyclic = [r for r in view_rows if r.requirement.date_mode == "cycle"]
-    if not cyclic:
-        st.info("周期で管理する行がありません。")
-    else:
-        labels = {
-            f"{r.subject.name}／{r.requirement.name}": r.holding.id for r in cyclic
-        }
-        col_a, col_b, col_c = st.columns([3, 2, 2])
-        picked = col_a.selectbox("対象", list(labels.keys()))
-        done_on = col_b.date_input("実施日", value=as_of, key="done_on")
-        done_by = col_c.text_input("実施者", value="")
+    if not any_shown:
+        st.success("対応が必要な人はいません。")
 
-        if st.button("記録する", type="primary"):
-            try:
-                validate_done_on(done_on, as_of)
-            except ScheduleError as e:
-                st.error(str(e))
-            else:
-                holding_id = labels[picked]
-                target = next(h for h in lg.holdings if h.id == holding_id)
-                target.add_record(Record(done_on=done_on, done_by=done_by))
-                st.success(f"{picked} に {done_on} の実施を記録しました。")
-                st.rerun()
+    if not shown_clear and clear:
+        note, action = st.columns([3, 1])
+        note.info(f"問題なしの人が{len(clear)}人います。「全員」を選ぶと表示できます。")
+        if action.button("全員を表示する", width="stretch", key="btn-show-all"):
+            st.session_state["_request_show_all"] = True
+            st.rerun()
 
 
-# --- 提出前チェック -------------------------------------------------------
-
-with tab_submit:
-    st.subheader("提出前チェック")
-    st.markdown(
-        "安全書類の差し戻し原因として、**資格証の期限切れ**と**健康診断日の年度跨ぎ**が"
-        "挙げられています。どちらも書類を作った日ではなく、**提出する日や工期の終わりの時点**で"
-        "切れているために起きます。ここでは提出予定日を入れて、その日に通らないものを洗い出します。"
-    )
-
-    col_a, col_b = st.columns([1, 2])
-    target_date = col_a.date_input("提出予定日／工期末", value=as_of, key="target")
-    names = {s.name: s.id for s in lg.subjects if s.kind == "person"}
-    picked_names = col_b.multiselect(
-        "対象者（未選択なら全件）", list(names.keys()), default=[]
-    )
-    subject_ids = [names[n] for n in picked_names] if picked_names else None
-
-    issues = submission_check(lg, target_date=target_date, subject_ids=subject_ids)
-
-    if not issues:
-        st.success(f"{target_date} 時点で、書類を止める行はありません。")
-    else:
-        st.error(f"{target_date} 時点で {len(issues)} 件が書類を止めます。")
-        st.dataframe(rows_frame(issues), width="stretch", hide_index=True)
-
-    st.caption(
-        "「期日が未確定」の行も通しません。分からないものを大丈夫として扱うと、"
-        "台帳を持つ意味がなくなるためです。"
-    )
-
-
-# --- 配置チェック ---------------------------------------------------------
-
-with tab_assign:
-    st.subheader("配置チェック")
-    st.markdown(
-        "**監理技術者は、資格者証と講習の両方が有効でなければ配置できません。**\n\n"
-        "この二つは別々に期限が進み、しかも講習の有効期間は「受講日の翌年1月1日から"
-        "5年後の12月31日まで」という数え方です。片方だけを見ていると通してしまいます。"
-    )
-
-    col_a, col_b = st.columns([1, 2])
-    person_names = {s.name: s.id for s in lg.subjects if s.kind == "person"}
-    who = col_a.selectbox("配置する人", list(person_names.keys()))
-
-    req_names = {
-        r.name: r.id
-        for r in lg.requirements
-        if r.category == "qualification" and r.has_deadline
-    }
-    default_reqs = [n for n in ("監理技術者資格者証", "監理技術者講習") if n in req_names]
-    needed = col_b.multiselect(
-        "この現場に必要な条件", list(req_names.keys()), default=default_reqs
-    )
-
-    check_on = st.date_input("配置する日", value=as_of, key="assign_on")
-
-    if not needed:
-        st.info("必要な条件を選んでください。")
-    else:
-        ok, reasons = assignment_check(
-            lg,
-            subject_id=person_names[who],
-            required_requirement_ids=[req_names[n] for n in needed],
-            as_of=check_on,
-        )
-        if ok:
-            st.success(f"{check_on} 時点で、{who} さんを配置できます。")
-        else:
-            st.error(f"{check_on} 時点で、{who} さんは配置できません。")
-            for reason in reasons:
-                st.write(f"- {reason}")
-
-
-# --- 種別マスタ -----------------------------------------------------------
-
-with tab_master:
-    st.subheader("種別マスタ")
-    st.markdown(
-        "**周期も警告日数もコードに書き込んでいません。**\n\n"
-        "実際の周期は設備の条件や社内規程で変わり、外部の人間が決め打ちできるものではないためです。"
-        "ここで登録・変更したものが、そのまま判定に使われます。"
-    )
-
-    master = pd.DataFrame(
-        [
-            {
-                "種別": r.name,
-                "区分": CATEGORY_LABEL[r.category],
-                "義務": OBLIGATION_LABEL[r.obligation],
-                "期日の決まり方": DATE_MODE_LABEL[r.date_mode],
-                "周期(月)": pd.NA if r.cycle_months is None else r.cycle_months,
-                "根拠": r.source,
-                "備考": r.note,
-            }
-            for r in lg.requirements
-        ]
-    )
-    master["周期(月)"] = master["周期(月)"].astype("Int64")
-    st.dataframe(master, width="stretch", hide_index=True)
-
-    st.divider()
-    st.markdown(
-        "#### 期限を持たない種別について\n"
-        "電気主任技術者の免状、第二種電気工事士の免状、認定電気工事従事者、"
-        "技能講習の修了証、特別教育などには有効期限がありません。"
-        "これらは「誰が持っているか」を把握するために登録しますが、期限としては扱いません。"
-        "**期限のないものを期限として並べると、台帳の信頼が落ちるためです。**"
-    )
-
-
-# --- 脚注 -----------------------------------------------------------------
+# --- 下部：選んだ人 -------------------------------------------------------
+# 開閉ではなく、常にここにある領域の中身が入れ替わる。
 
 st.divider()
-with st.expander("このデモで作っていないもの"):
-    st.markdown(
-        "意図的に外しています。隠すと嘘になるので明記します。\n\n"
-        "- ログイン、複数ユーザー、権限の分離\n"
-        "- サーバーへの保存（変更はセッション内のみ。再読み込みで消えます）\n"
-        "- CSV の取り込み（書き出しのみ実装）\n"
-        "- 通知・メール送信\n"
-        "- 実在のデータ\n\n"
-        "期限の扱い方を示すことが目的であり、そこに関係しない部分は入れていません。"
-    )
+st.markdown("#### 選んだ人")
 
-with st.expander("周期・根拠の出典"):
-    st.markdown(
-        "初期データの周期は、次の公開情報を参考にした**例示**です。"
-        "実際の周期は設備・契約・社内規程により異なるため、種別マスタで変更できます。\n\n"
-        "- 監理技術者資格者証／監理技術者講習: 建設業法および同施行規則"
-        "（令和3年1月1日改正で講習の有効期間の数え方が変更）\n"
-        "- 第一種電気工事士 定期講習: 電気工事士法\n"
-        "- 危険物取扱者 保安講習: 消防法\n"
-        "- 定期健康診断: 労働安全衛生法\n"
-        "- 自家用電気工作物の月次・年次点検: 電気事業法\n"
-        "- 測定機器の校正、内部監査: ISO 9001:2015"
-    )
+selected_id = st.session_state.get("selected")
+selected = lg.subject(selected_id) if selected_id else None
+
+with st.container(border=True):
+    if selected is None:
+        st.write("上のカードの「資格・健診を確認」を押すと、その人の資格がここに出ます。")
+    else:
+        head, close = st.columns([4, 1])
+        head.markdown(f"##### {selected.name}")
+        head.caption(f"{selected.site} ／ {selected.role}")
+        if close.button("閉じる", width="stretch", key="btn-close-detail"):
+            st.session_state.pop("selected", None)
+            st.rerun()
+
+        rows = [r for r in build_rows(lg, today) if r.subject.id == selected.id]
+        if not rows:
+            st.info("この人には資格・講習・健診がまだ登録されていません。")
+
+        for row in rows:
+            with st.container(border=True):
+                info, action = st.columns([3, 2])
+
+                with info:
+                    st.markdown(f"**{row.requirement.name}**")
+                    st.caption(
+                        f"{CATEGORY_LABEL[row.requirement.category]}／"
+                        f"{OBLIGATION_LABEL[row.requirement.obligation]}"
+                    )
+                    st.write(STATUS_TEXT[row.status])
+
+                    if not row.requirement.has_deadline:
+                        st.caption("この資格に有効期限はありません（保有の記録）")
+                    elif row.due_on is None:
+                        st.caption("前回の日付が入っていないため、次回の期日を出せません")
+                    else:
+                        st.write(
+                            f"期限：{jp_date(row.due_on)} {remaining_text(row.days_left)}"
+                        )
+
+                    last = row.holding.last_done_on
+                    if row.requirement.date_mode == "cycle":
+                        st.caption(
+                            f"前回：{jp_date(last) if last else '未入力'}"
+                            f"　周期：{row.requirement.cycle_months}か月"
+                        )
+
+                with action:
+                    if row.requirement.date_mode != "cycle":
+                        st.caption("実施日ではなく、証に記載の期限で管理する項目です")
+                        continue
+
+                    done_on = st.date_input(
+                        "実施した日",
+                        value=today,
+                        key=f"done-{row.holding.id}",
+                    )
+                    if st.button(
+                        "実施を記録する",
+                        key=f"rec-{row.holding.id}",
+                        width="stretch",
+                    ):
+                        try:
+                            validate_done_on(done_on, today)
+                        except ScheduleError as e:
+                            st.error(str(e))
+                        else:
+                            row.holding.add_record(Record(done_on=done_on))
+                            st.session_state["_flash"] = (
+                                f"{selected.name} の {row.requirement.name} に "
+                                f"{jp_date(done_on)} の実施を記録しました。"
+                                "次回の期限を計算し直しました。"
+                            )
+                            st.rerun()
+
+st.caption(
+    "※ このデモの変更はブラウザのセッション内にのみ保持され、保存されません。"
+    "社員名・施設名はすべて架空です。"
+)

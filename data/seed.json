@@ -1,4 +1,5 @@
 {
+  "generated_on": "2026-08-29",
   "soon_days": 30,
   "upcoming_days": 60,
   "requirements": [
@@ -134,241 +135,1726 @@
     }
   ],
   "subjects": [
-    { "id": "p-01", "name": "山口 直人", "kind": "person", "site": "本社", "role": "施工管理" },
-    { "id": "p-02", "name": "迫田 和樹", "kind": "person", "site": "川内支店", "role": "施工管理" },
-    { "id": "p-03", "name": "東 亮", "kind": "person", "site": "国分支店", "role": "電気工事" },
-    { "id": "p-04", "name": "前田 修司", "kind": "person", "site": "志布志支店", "role": "電気工事" },
-    { "id": "p-05", "name": "川畑 悠", "kind": "person", "site": "姶良支店", "role": "電気工事" },
-    { "id": "p-06", "name": "有村 千尋", "kind": "person", "site": "本社", "role": "保守・計装" },
-    { "id": "a-01", "name": "みなみ浄水場 受変電設備", "kind": "asset", "site": "本社", "role": "顧客設備" },
-    { "id": "a-02", "name": "きたうら中継ポンプ場 受変電設備", "kind": "asset", "site": "川内支店", "role": "顧客設備" },
-    { "id": "a-03", "name": "絶縁抵抗計 No.3", "kind": "asset", "site": "本社", "role": "測定機器" },
-    { "id": "a-04", "name": "接地抵抗計 No.1", "kind": "asset", "site": "国分支店", "role": "測定機器" },
-    { "id": "a-05", "name": "クランプメータ No.7", "kind": "asset", "site": "本社", "role": "測定機器" },
-    { "id": "a-99", "name": "全社（品質マネジメントシステム）", "kind": "asset", "site": "本社", "role": "管理システム" }
+    {
+      "id": "p-001",
+      "name": "迫田 和樹",
+      "kind": "person",
+      "site": "鹿児島本社",
+      "role": "施工管理"
+    },
+    {
+      "id": "p-002",
+      "name": "田中 新一",
+      "kind": "person",
+      "site": "志布志支店",
+      "role": "施工管理"
+    },
+    {
+      "id": "p-003",
+      "name": "山口 正人",
+      "kind": "person",
+      "site": "川内支店",
+      "role": "電気工事"
+    },
+    {
+      "id": "p-004",
+      "name": "東 亮",
+      "kind": "person",
+      "site": "鹿児島本社",
+      "role": "施工管理"
+    },
+    {
+      "id": "p-005",
+      "name": "中村 健一",
+      "kind": "person",
+      "site": "国分支店",
+      "role": "電気工事"
+    },
+    {
+      "id": "p-006",
+      "name": "山下 太郎",
+      "kind": "person",
+      "site": "鹿児島本社",
+      "role": "施工管理"
+    },
+    {
+      "id": "p-007",
+      "name": "佐藤 龍也",
+      "kind": "person",
+      "site": "志布志支店",
+      "role": "電気工事"
+    },
+    {
+      "id": "p-008",
+      "name": "松本 裕介",
+      "kind": "person",
+      "site": "川内支店",
+      "role": "施工管理"
+    },
+    {
+      "id": "p-009",
+      "name": "加藤 由美",
+      "kind": "person",
+      "site": "姶良支店",
+      "role": "事務"
+    },
+    {
+      "id": "p-010",
+      "name": "今村 和也",
+      "kind": "person",
+      "site": "苓北支店",
+      "role": "電気工事"
+    },
+    {
+      "id": "p-011",
+      "name": "有村 千尋",
+      "kind": "person",
+      "site": "鹿児島本社",
+      "role": "保守・計装"
+    },
+    {
+      "id": "p-012",
+      "name": "川畑 悠",
+      "kind": "person",
+      "site": "姶良支店",
+      "role": "電気工事"
+    },
+    {
+      "id": "p-013",
+      "name": "上野 由美",
+      "kind": "person",
+      "site": "川内支店",
+      "role": "事務"
+    },
+    {
+      "id": "p-014",
+      "name": "内田 拓海",
+      "kind": "person",
+      "site": "国分支店",
+      "role": "保守・計装"
+    },
+    {
+      "id": "p-015",
+      "name": "大久保 千尋",
+      "kind": "person",
+      "site": "志布志支店",
+      "role": "電気工事"
+    },
+    {
+      "id": "p-016",
+      "name": "串木野 和也",
+      "kind": "person",
+      "site": "姶良支店",
+      "role": "施工管理"
+    },
+    {
+      "id": "p-017",
+      "name": "郡山 沙織",
+      "kind": "person",
+      "site": "苓北支店",
+      "role": "事務"
+    },
+    {
+      "id": "p-018",
+      "name": "重信 新一",
+      "kind": "person",
+      "site": "鹿児島本社",
+      "role": "保守・計装"
+    },
+    {
+      "id": "p-019",
+      "name": "白坂 誠",
+      "kind": "person",
+      "site": "川内支店",
+      "role": "電気工事"
+    },
+    {
+      "id": "p-020",
+      "name": "瀬戸口 直人",
+      "kind": "person",
+      "site": "国分支店",
+      "role": "施工管理"
+    },
+    {
+      "id": "p-021",
+      "name": "曽木 健一",
+      "kind": "person",
+      "site": "志布志支店",
+      "role": "事務"
+    },
+    {
+      "id": "p-022",
+      "name": "高崎 翔",
+      "kind": "person",
+      "site": "姶良支店",
+      "role": "保守・計装"
+    },
+    {
+      "id": "p-023",
+      "name": "竹之内 和樹",
+      "kind": "person",
+      "site": "苓北支店",
+      "role": "電気工事"
+    },
+    {
+      "id": "p-024",
+      "name": "田代 太郎",
+      "kind": "person",
+      "site": "鹿児島本社",
+      "role": "施工管理"
+    },
+    {
+      "id": "p-025",
+      "name": "鶴田 陽子",
+      "kind": "person",
+      "site": "川内支店",
+      "role": "事務"
+    },
+    {
+      "id": "p-026",
+      "name": "徳永 亮",
+      "kind": "person",
+      "site": "国分支店",
+      "role": "保守・計装"
+    },
+    {
+      "id": "p-027",
+      "name": "永田 龍也",
+      "kind": "person",
+      "site": "志布志支店",
+      "role": "電気工事"
+    },
+    {
+      "id": "p-028",
+      "name": "西田 健太",
+      "kind": "person",
+      "site": "姶良支店",
+      "role": "施工管理"
+    },
+    {
+      "id": "p-029",
+      "name": "野元 修司",
+      "kind": "person",
+      "site": "苓北支店",
+      "role": "事務"
+    },
+    {
+      "id": "p-030",
+      "name": "橋口 裕介",
+      "kind": "person",
+      "site": "鹿児島本社",
+      "role": "保守・計装"
+    },
+    {
+      "id": "p-031",
+      "name": "浜田 麻衣",
+      "kind": "person",
+      "site": "川内支店",
+      "role": "電気工事"
+    },
+    {
+      "id": "p-032",
+      "name": "肥後 悠",
+      "kind": "person",
+      "site": "国分支店",
+      "role": "施工管理"
+    },
+    {
+      "id": "p-033",
+      "name": "福留 由美",
+      "kind": "person",
+      "site": "志布志支店",
+      "role": "事務"
+    },
+    {
+      "id": "p-034",
+      "name": "藤崎 拓海",
+      "kind": "person",
+      "site": "姶良支店",
+      "role": "保守・計装"
+    },
+    {
+      "id": "p-035",
+      "name": "堀之内 千尋",
+      "kind": "person",
+      "site": "苓北支店",
+      "role": "電気工事"
+    },
+    {
+      "id": "p-036",
+      "name": "牧野 和也",
+      "kind": "person",
+      "site": "鹿児島本社",
+      "role": "施工管理"
+    },
+    {
+      "id": "p-037",
+      "name": "溝口 沙織",
+      "kind": "person",
+      "site": "川内支店",
+      "role": "事務"
+    },
+    {
+      "id": "p-038",
+      "name": "宮里 新一",
+      "kind": "person",
+      "site": "国分支店",
+      "role": "保守・計装"
+    },
+    {
+      "id": "p-039",
+      "name": "村岡 誠",
+      "kind": "person",
+      "site": "志布志支店",
+      "role": "電気工事"
+    },
+    {
+      "id": "p-040",
+      "name": "山口 和樹",
+      "kind": "person",
+      "site": "姶良支店",
+      "role": "施工管理"
+    },
+    {
+      "id": "p-041",
+      "name": "迫田 太郎",
+      "kind": "person",
+      "site": "苓北支店",
+      "role": "事務"
+    },
+    {
+      "id": "p-042",
+      "name": "東 陽子",
+      "kind": "person",
+      "site": "鹿児島本社",
+      "role": "保守・計装"
+    },
+    {
+      "id": "p-043",
+      "name": "前田 亮",
+      "kind": "person",
+      "site": "川内支店",
+      "role": "電気工事"
+    },
+    {
+      "id": "p-044",
+      "name": "川畑 龍也",
+      "kind": "person",
+      "site": "国分支店",
+      "role": "施工管理"
+    },
+    {
+      "id": "p-045",
+      "name": "有村 健太",
+      "kind": "person",
+      "site": "志布志支店",
+      "role": "事務"
+    },
+    {
+      "id": "p-046",
+      "name": "田中 修司",
+      "kind": "person",
+      "site": "姶良支店",
+      "role": "保守・計装"
+    },
+    {
+      "id": "p-047",
+      "name": "中村 裕介",
+      "kind": "person",
+      "site": "苓北支店",
+      "role": "電気工事"
+    },
+    {
+      "id": "p-048",
+      "name": "山下 麻衣",
+      "kind": "person",
+      "site": "鹿児島本社",
+      "role": "施工管理"
+    },
+    {
+      "id": "p-049",
+      "name": "佐藤 悠",
+      "kind": "person",
+      "site": "川内支店",
+      "role": "事務"
+    },
+    {
+      "id": "p-050",
+      "name": "松本 由美",
+      "kind": "person",
+      "site": "国分支店",
+      "role": "保守・計装"
+    },
+    {
+      "id": "p-051",
+      "name": "加藤 拓海",
+      "kind": "person",
+      "site": "志布志支店",
+      "role": "電気工事"
+    },
+    {
+      "id": "p-052",
+      "name": "今村 千尋",
+      "kind": "person",
+      "site": "姶良支店",
+      "role": "施工管理"
+    },
+    {
+      "id": "p-053",
+      "name": "上野 和也",
+      "kind": "person",
+      "site": "苓北支店",
+      "role": "事務"
+    },
+    {
+      "id": "p-054",
+      "name": "内田 沙織",
+      "kind": "person",
+      "site": "鹿児島本社",
+      "role": "保守・計装"
+    },
+    {
+      "id": "p-055",
+      "name": "大久保 新一",
+      "kind": "person",
+      "site": "川内支店",
+      "role": "電気工事"
+    },
+    {
+      "id": "p-056",
+      "name": "串木野 誠",
+      "kind": "person",
+      "site": "国分支店",
+      "role": "施工管理"
+    },
+    {
+      "id": "p-057",
+      "name": "郡山 直人",
+      "kind": "person",
+      "site": "志布志支店",
+      "role": "事務"
+    },
+    {
+      "id": "p-058",
+      "name": "重信 健一",
+      "kind": "person",
+      "site": "姶良支店",
+      "role": "保守・計装"
+    },
+    {
+      "id": "p-059",
+      "name": "白坂 翔",
+      "kind": "person",
+      "site": "苓北支店",
+      "role": "電気工事"
+    },
+    {
+      "id": "p-060",
+      "name": "瀬戸口 和樹",
+      "kind": "person",
+      "site": "鹿児島本社",
+      "role": "施工管理"
+    },
+    {
+      "id": "p-061",
+      "name": "曽木 太郎",
+      "kind": "person",
+      "site": "川内支店",
+      "role": "事務"
+    },
+    {
+      "id": "p-062",
+      "name": "高崎 陽子",
+      "kind": "person",
+      "site": "国分支店",
+      "role": "保守・計装"
+    },
+    {
+      "id": "p-063",
+      "name": "竹之内 亮",
+      "kind": "person",
+      "site": "志布志支店",
+      "role": "電気工事"
+    },
+    {
+      "id": "p-064",
+      "name": "田代 龍也",
+      "kind": "person",
+      "site": "姶良支店",
+      "role": "施工管理"
+    },
+    {
+      "id": "p-065",
+      "name": "鶴田 健太",
+      "kind": "person",
+      "site": "苓北支店",
+      "role": "事務"
+    },
+    {
+      "id": "p-066",
+      "name": "徳永 修司",
+      "kind": "person",
+      "site": "鹿児島本社",
+      "role": "保守・計装"
+    },
+    {
+      "id": "p-067",
+      "name": "永田 裕介",
+      "kind": "person",
+      "site": "川内支店",
+      "role": "電気工事"
+    },
+    {
+      "id": "p-068",
+      "name": "西田 麻衣",
+      "kind": "person",
+      "site": "国分支店",
+      "role": "施工管理"
+    },
+    {
+      "id": "p-069",
+      "name": "野元 悠",
+      "kind": "person",
+      "site": "志布志支店",
+      "role": "事務"
+    },
+    {
+      "id": "p-070",
+      "name": "橋口 由美",
+      "kind": "person",
+      "site": "姶良支店",
+      "role": "保守・計装"
+    },
+    {
+      "id": "p-071",
+      "name": "浜田 拓海",
+      "kind": "person",
+      "site": "苓北支店",
+      "role": "電気工事"
+    },
+    {
+      "id": "p-072",
+      "name": "肥後 千尋",
+      "kind": "person",
+      "site": "鹿児島本社",
+      "role": "施工管理"
+    },
+    {
+      "id": "p-073",
+      "name": "福留 和也",
+      "kind": "person",
+      "site": "川内支店",
+      "role": "事務"
+    },
+    {
+      "id": "p-074",
+      "name": "藤崎 沙織",
+      "kind": "person",
+      "site": "国分支店",
+      "role": "保守・計装"
+    },
+    {
+      "id": "p-075",
+      "name": "堀之内 新一",
+      "kind": "person",
+      "site": "志布志支店",
+      "role": "電気工事"
+    },
+    {
+      "id": "p-076",
+      "name": "牧野 誠",
+      "kind": "person",
+      "site": "姶良支店",
+      "role": "施工管理"
+    }
   ],
   "holdings": [
     {
-      "id": "h-001",
-      "subject_id": "p-02",
+      "id": "h-0001",
+      "subject_id": "p-001",
       "requirement_id": "req-kanri-cert",
       "fixed_due_on": "2027-03-31",
       "records": [],
-      "note": "資格者証は有効。"
+      "note": ""
     },
     {
-      "id": "h-002",
-      "subject_id": "p-02",
+      "id": "h-0002",
+      "subject_id": "p-001",
       "requirement_id": "req-kanri-course",
       "fixed_due_on": "2026-07-31",
       "records": [],
-      "note": "資格者証は生きているが講習が切れている。監理技術者としては配置できない。"
+      "note": "資格者証は有効だが講習が切れている。"
     },
     {
-      "id": "h-003",
-      "subject_id": "p-01",
-      "requirement_id": "req-kanri-cert",
-      "fixed_due_on": "2029-11-30",
-      "records": [],
-      "note": ""
-    },
-    {
-      "id": "h-004",
-      "subject_id": "p-01",
-      "requirement_id": "req-kanri-course",
-      "fixed_due_on": "2029-12-31",
-      "records": [],
-      "note": ""
-    },
-    {
-      "id": "h-005",
-      "subject_id": "p-01",
+      "id": "h-0003",
+      "subject_id": "p-001",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
-      "records": [{ "done_on": "2025-09-10", "done_by": "総務", "memo": "定期健診" }],
+      "records": [
+        {
+          "done_on": "2026-02-18",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
       "note": ""
     },
     {
-      "id": "h-006",
-      "subject_id": "p-02",
+      "id": "h-0004",
+      "subject_id": "p-002",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
-      "records": [{ "done_on": "2026-02-18", "done_by": "総務", "memo": "定期健診" }],
+      "records": [
+        {
+          "done_on": "2025-05-10",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
       "note": ""
     },
     {
-      "id": "h-007",
-      "subject_id": "p-03",
-      "requirement_id": "req-kenshin",
-      "fixed_due_on": null,
-      "records": [{ "done_on": "2026-06-02", "done_by": "総務", "memo": "定期健診" }],
-      "note": ""
-    },
-    {
-      "id": "h-008",
-      "subject_id": "p-04",
-      "requirement_id": "req-kenshin",
-      "fixed_due_on": null,
-      "records": [{ "done_on": "2025-10-15", "done_by": "総務", "memo": "定期健診" }],
-      "note": ""
-    },
-    {
-      "id": "h-009",
-      "subject_id": "p-05",
-      "requirement_id": "req-kenshin",
-      "fixed_due_on": null,
-      "records": [{ "done_on": "2026-05-21", "done_by": "総務", "memo": "定期健診" }],
-      "note": ""
-    },
-    {
-      "id": "h-010",
-      "subject_id": "p-06",
-      "requirement_id": "req-kenshin",
-      "fixed_due_on": null,
-      "records": [{ "done_on": "2026-07-08", "done_by": "総務", "memo": "定期健診" }],
-      "note": ""
-    },
-    {
-      "id": "h-011",
-      "subject_id": "p-03",
+      "id": "h-0005",
+      "subject_id": "p-003",
       "requirement_id": "req-den1-course",
       "fixed_due_on": null,
-      "records": [],
-      "note": "免状は保有しているが、前回の定期講習の受講日が台帳に無い。期日を確定できない。"
+      "records": [
+        {
+          "done_on": "2021-04-15",
+          "done_by": "本人",
+          "memo": "定期講習"
+        }
+      ],
+      "note": ""
     },
     {
-      "id": "h-012",
-      "subject_id": "p-03",
+      "id": "h-0006",
+      "subject_id": "p-003",
       "requirement_id": "req-den1-menjo",
       "fixed_due_on": null,
       "records": [],
-      "note": "免状に期限は無い。保有の記録として登録。"
-    },
-    {
-      "id": "h-013",
-      "subject_id": "p-01",
-      "requirement_id": "req-den1-course",
-      "fixed_due_on": null,
-      "records": [{ "done_on": "2023-11-14", "done_by": "本人", "memo": "定期講習" }],
       "note": ""
     },
     {
-      "id": "h-014",
-      "subject_id": "p-05",
-      "requirement_id": "req-den1-course",
+      "id": "h-0007",
+      "subject_id": "p-003",
+      "requirement_id": "req-kenshin",
       "fixed_due_on": null,
-      "records": [{ "done_on": "2021-10-05", "done_by": "本人", "memo": "定期講習" }],
+      "records": [
+        {
+          "done_on": "2025-09-20",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
       "note": ""
     },
     {
-      "id": "h-015",
-      "subject_id": "p-06",
-      "requirement_id": "req-shunin-menjo",
+      "id": "h-0008",
+      "subject_id": "p-004",
+      "requirement_id": "req-den1-course",
       "fixed_due_on": null,
       "records": [],
-      "note": "第三種電気主任技術者。期限は無い。"
+      "note": "免状は保有しているが前回の受講日が台帳に無い。"
     },
     {
-      "id": "h-016",
-      "subject_id": "p-04",
+      "id": "h-0009",
+      "subject_id": "p-004",
+      "requirement_id": "req-den1-menjo",
+      "fixed_due_on": null,
+      "records": [],
+      "note": ""
+    },
+    {
+      "id": "h-0010",
+      "subject_id": "p-004",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-06-02",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0011",
+      "subject_id": "p-005",
+      "requirement_id": "req-kikenbutsu-course",
+      "fixed_due_on": null,
+      "records": [],
+      "note": "従事開始時の受講日が不明。"
+    },
+    {
+      "id": "h-0012",
+      "subject_id": "p-005",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-07-08",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0013",
+      "subject_id": "p-006",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2025-09-10",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0014",
+      "subject_id": "p-007",
+      "requirement_id": "req-den1-course",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2021-09-20",
+          "done_by": "本人",
+          "memo": "定期講習"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0015",
+      "subject_id": "p-007",
+      "requirement_id": "req-den1-menjo",
+      "fixed_due_on": null,
+      "records": [],
+      "note": ""
+    },
+    {
+      "id": "h-0016",
+      "subject_id": "p-008",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2025-09-25",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0017",
+      "subject_id": "p-008",
       "requirement_id": "req-driver-license",
       "fixed_due_on": "2026-10-20",
       "records": [],
       "note": ""
     },
     {
-      "id": "h-017",
-      "subject_id": "p-05",
-      "requirement_id": "req-driver-license",
-      "fixed_due_on": "2028-04-11",
-      "records": [],
+      "id": "h-0018",
+      "subject_id": "p-009",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2025-09-28",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
       "note": ""
     },
     {
-      "id": "h-018",
-      "subject_id": "p-04",
+      "id": "h-0019",
+      "subject_id": "p-010",
       "requirement_id": "req-kikenbutsu-course",
       "fixed_due_on": null,
-      "records": [{ "done_on": "2023-09-27", "done_by": "本人", "memo": "保安講習" }],
-      "note": "自家発電設備の燃料取扱に従事。"
-    },
-    {
-      "id": "h-019",
-      "subject_id": "p-02",
-      "requirement_id": "req-shokucho-koujou",
-      "fixed_due_on": null,
-      "records": [{ "done_on": "2022-06-15", "done_by": "本人", "memo": "能力向上教育" }],
-      "note": ""
-    },
-    {
-      "id": "h-020",
-      "subject_id": "a-01",
-      "requirement_id": "req-monthly-check",
-      "fixed_due_on": null,
       "records": [
-        { "done_on": "2026-06-04", "done_by": "有村", "memo": "" },
-        { "done_on": "2026-07-06", "done_by": "有村", "memo": "" },
-        { "done_on": "2026-08-05", "done_by": "有村", "memo": "" }
+        {
+          "done_on": "2023-09-30",
+          "done_by": "本人",
+          "memo": "保安講習"
+        }
       ],
       "note": ""
     },
     {
-      "id": "h-021",
-      "subject_id": "a-01",
-      "requirement_id": "req-annual-check",
-      "fixed_due_on": null,
-      "records": [{ "done_on": "2025-11-12", "done_by": "有村", "memo": "停電作業" }],
-      "note": ""
-    },
-    {
-      "id": "h-022",
-      "subject_id": "a-02",
-      "requirement_id": "req-monthly-check",
+      "id": "h-0020",
+      "subject_id": "p-010",
+      "requirement_id": "req-kenshin",
       "fixed_due_on": null,
       "records": [
-        { "done_on": "2026-06-18", "done_by": "東", "memo": "" },
-        { "done_on": "2026-07-21", "done_by": "東", "memo": "" }
+        {
+          "done_on": "2026-04-03",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
       ],
-      "note": "8月分が未実施。"
-    },
-    {
-      "id": "h-023",
-      "subject_id": "a-02",
-      "requirement_id": "req-annual-check",
-      "fixed_due_on": null,
-      "records": [{ "done_on": "2026-03-09", "done_by": "東", "memo": "停電作業" }],
       "note": ""
     },
     {
-      "id": "h-024",
-      "subject_id": "a-03",
-      "requirement_id": "req-instrument-cal",
-      "fixed_due_on": null,
-      "records": [{ "done_on": "2025-09-19", "done_by": "外部委託", "memo": "校正証明書あり" }],
+      "id": "h-0021",
+      "subject_id": "p-011",
+      "requirement_id": "req-kanri-cert",
+      "fixed_due_on": "2029-11-30",
+      "records": [],
       "note": ""
     },
     {
-      "id": "h-025",
-      "subject_id": "a-04",
-      "requirement_id": "req-instrument-cal",
-      "fixed_due_on": null,
-      "records": [{ "done_on": "2026-01-23", "done_by": "外部委託", "memo": "校正証明書あり" }],
+      "id": "h-0022",
+      "subject_id": "p-011",
+      "requirement_id": "req-kanri-course",
+      "fixed_due_on": "2029-12-31",
+      "records": [],
       "note": ""
     },
     {
-      "id": "h-026",
-      "subject_id": "a-05",
-      "requirement_id": "req-instrument-cal",
+      "id": "h-0023",
+      "subject_id": "p-011",
+      "requirement_id": "req-shunin-menjo",
       "fixed_due_on": null,
       "records": [],
-      "note": "購入後、校正の記録が台帳に無い。期日を確定できない。"
+      "note": ""
     },
     {
-      "id": "h-027",
-      "subject_id": "a-99",
-      "requirement_id": "req-iso-audit",
+      "id": "h-0024",
+      "subject_id": "p-011",
+      "requirement_id": "req-kenshin",
       "fixed_due_on": null,
-      "records": [{ "done_on": "2025-10-28", "done_by": "品質管理課", "memo": "第46期内部監査" }],
+      "records": [
+        {
+          "done_on": "2026-07-08",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0025",
+      "subject_id": "p-012",
+      "requirement_id": "req-den1-menjo",
+      "fixed_due_on": null,
+      "records": [],
+      "note": ""
+    },
+    {
+      "id": "h-0026",
+      "subject_id": "p-012",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-05-21",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0027",
+      "subject_id": "p-013",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-05-15",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0028",
+      "subject_id": "p-014",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-05-28",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0029",
+      "subject_id": "p-015",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-06-10",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0030",
+      "subject_id": "p-016",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-06-23",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0031",
+      "subject_id": "p-017",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2025-12-08",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0032",
+      "subject_id": "p-018",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2025-12-21",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0033",
+      "subject_id": "p-019",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-01-03",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0034",
+      "subject_id": "p-020",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-01-16",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0035",
+      "subject_id": "p-021",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-01-29",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0036",
+      "subject_id": "p-022",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-02-11",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0037",
+      "subject_id": "p-023",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-02-24",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0038",
+      "subject_id": "p-024",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-03-09",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0039",
+      "subject_id": "p-025",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-03-22",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0040",
+      "subject_id": "p-026",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-04-04",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0041",
+      "subject_id": "p-027",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-04-17",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0042",
+      "subject_id": "p-028",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-04-30",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0043",
+      "subject_id": "p-029",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-05-13",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0044",
+      "subject_id": "p-030",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-05-26",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0045",
+      "subject_id": "p-031",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-06-08",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0046",
+      "subject_id": "p-032",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-06-21",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0047",
+      "subject_id": "p-033",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2025-12-06",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0048",
+      "subject_id": "p-034",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2025-12-19",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0049",
+      "subject_id": "p-035",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-01-01",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0050",
+      "subject_id": "p-036",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-01-14",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0051",
+      "subject_id": "p-037",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-01-27",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0052",
+      "subject_id": "p-038",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-02-09",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0053",
+      "subject_id": "p-039",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-02-22",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0054",
+      "subject_id": "p-040",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-03-07",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0055",
+      "subject_id": "p-041",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-03-20",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0056",
+      "subject_id": "p-042",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-04-02",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0057",
+      "subject_id": "p-043",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-04-15",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0058",
+      "subject_id": "p-044",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-04-28",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0059",
+      "subject_id": "p-045",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-05-11",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0060",
+      "subject_id": "p-046",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-05-24",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0061",
+      "subject_id": "p-047",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-06-06",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0062",
+      "subject_id": "p-048",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-06-19",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0063",
+      "subject_id": "p-049",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2025-12-04",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0064",
+      "subject_id": "p-050",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2025-12-17",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0065",
+      "subject_id": "p-051",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2025-12-30",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0066",
+      "subject_id": "p-052",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-01-12",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0067",
+      "subject_id": "p-053",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-01-25",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0068",
+      "subject_id": "p-054",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-02-07",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0069",
+      "subject_id": "p-055",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-02-20",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0070",
+      "subject_id": "p-056",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-03-05",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0071",
+      "subject_id": "p-057",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-03-18",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0072",
+      "subject_id": "p-058",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-03-31",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0073",
+      "subject_id": "p-059",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-04-13",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0074",
+      "subject_id": "p-060",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-04-26",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0075",
+      "subject_id": "p-061",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-05-09",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0076",
+      "subject_id": "p-062",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-05-22",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0077",
+      "subject_id": "p-063",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-06-04",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0078",
+      "subject_id": "p-064",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-06-17",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0079",
+      "subject_id": "p-065",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2025-12-02",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0080",
+      "subject_id": "p-066",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2025-12-15",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0081",
+      "subject_id": "p-067",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2025-12-28",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0082",
+      "subject_id": "p-068",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-01-10",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0083",
+      "subject_id": "p-069",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-01-23",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0084",
+      "subject_id": "p-070",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-02-05",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0085",
+      "subject_id": "p-071",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-02-18",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0086",
+      "subject_id": "p-072",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-03-03",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0087",
+      "subject_id": "p-073",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-03-16",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0088",
+      "subject_id": "p-074",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-03-29",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0089",
+      "subject_id": "p-075",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-04-11",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0090",
+      "subject_id": "p-076",
+      "requirement_id": "req-kenshin",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-04-24",
+          "done_by": "総務",
+          "memo": "定期健診"
+        }
+      ],
       "note": ""
     }
   ]
