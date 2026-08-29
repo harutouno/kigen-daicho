@@ -1,4 +1,4 @@
-"""期限台帳 — 人の期限確認。
+"""期限台帳。
 
 画面はドメイン層（core/）の薄い皮として作る。期日の決め方と判定はすべて core 側にあり、
 この層には計算を置かない。
@@ -17,14 +17,25 @@ from datetime import date
 
 import streamlit as st
 
-from core.models import CATEGORY_LABEL, OBLIGATION_LABEL, Record
-from core.review import SubjectSummary, build_rows, summarize_by_subject
+from core.models import CATEGORY_LABEL, OBLIGATION_LABEL, Ledger, Record
+from core.review import (
+    Row,
+    SubjectSummary,
+    build_rows,
+    submission_check,
+    summarize_by_subject,
+)
 from core.schedule import ScheduleError, validate_done_on
 from core.store import SEED_PATH, load_ledger
 
 st.set_page_config(page_title="期限台帳", page_icon="📋", layout="wide")
 
 CARDS_PER_ROW = 3
+
+PAGE_PEOPLE = "社員の資格・健診"
+PAGE_ASSETS = "道具・機器の点検"
+PAGE_SUBMISSION = "安全書類の提出前チェック"
+PAGE_TYPES = "種類の設定"
 
 SECTIONS: list[tuple[str, str, str, str]] = [
     ("overdue", "🔴", "期限切れ", "期限を過ぎています"),
@@ -44,6 +55,9 @@ STATUS_TEXT: dict[str, str] = {
 NOT_BUILT = "この機能はまだ作っていません"
 
 
+# --- 共通の小物 -----------------------------------------------------------
+
+
 def jp_date(d: date) -> str:
     """2026年7月31日 の形。利用者が読み慣れた並びにする。"""
     return f"{d.year}年{d.month}月{d.day}日"
@@ -57,15 +71,22 @@ def remaining_text(days: int | None) -> str:
     return f"（あと{days}日）"
 
 
-def ledger():
+def ledger() -> Ledger:
     if "ledger" not in st.session_state:
         st.session_state.ledger = load_ledger(SEED_PATH)
     return st.session_state.ledger
 
 
+def reason_text(row: Row) -> str:
+    """なぜ書類が通らないのかを、そのまま読める文にする。"""
+    if row.due_on is None:
+        return "前回の日付が入っていないため、期限が分かりません"
+    return f"{jp_date(row.due_on)} に期限が切れます"
+
+
 # --- 前の操作の後始末 -----------------------------------------------------
 # ウィジェットが作られたあとに session_state を書き換えられないため、
-# ボタンで表示範囲を変える要求は、次の実行の先頭でここに反映する。
+# ボタンによる要求は、次の実行の先頭でここに反映する。
 
 if st.session_state.pop("_request_show_all", False):
     st.session_state["scope"] = "全員"
@@ -73,6 +94,36 @@ if st.session_state.pop("_request_show_all", False):
 # 記録直後に画面を作り直すため、その場で出したメッセージは消えてしまう。
 # 次の実行に持ち越して表示する。何も言われないと、記録できたのか分からない。
 _flash = st.session_state.pop("_flash", None)
+
+
+# --- 左サイドバー ---------------------------------------------------------
+
+with st.sidebar:
+    st.markdown("### 期限台帳")
+    st.caption("資格・講習・健診・点検の期限を管理します")
+
+    st.markdown("**メニュー**")
+    nav = st.radio(
+        "メニュー",
+        [PAGE_PEOPLE, PAGE_ASSETS, PAGE_SUBMISSION, PAGE_TYPES],
+        label_visibility="collapsed",
+        key="nav",
+    )
+
+    st.markdown("**登録**")
+    st.button("社員を登録", width="stretch", key="btn-add-person", disabled=True)
+    st.button("社員に資格・講習を追加", width="stretch", key="btn-add-qual", disabled=True)
+    st.caption("※ 登録はまだ作っていません")
+
+    st.divider()
+    st.caption("**使い方で迷ったら**\n\n不明な点は事務所までお問い合わせください。")
+
+
+lg = ledger()
+today = date.today()
+
+
+# --- 社員の資格・健診 -----------------------------------------------------
 
 
 def draw_card(summary: SubjectSummary, slot) -> None:
@@ -104,99 +155,6 @@ def draw_card(summary: SubjectSummary, slot) -> None:
             st.session_state["selected"] = summary.subject.id
 
 
-# --- 左サイドバー ---------------------------------------------------------
-
-with st.sidebar:
-    st.markdown("### 期限台帳")
-    st.caption("資格・講習・健診・点検の期限を管理します")
-
-    st.markdown("**メニュー**")
-    nav = st.radio(
-        "メニュー",
-        ["社員の資格・健診", "道具・機器の点検", "安全書類の提出前チェック", "種類の設定"],
-        label_visibility="collapsed",
-        key="nav",
-    )
-
-    st.markdown("**登録**")
-    st.button("社員を登録", width="stretch", key="btn-add-person", disabled=True)
-    st.button("社員に資格・講習を追加", width="stretch", key="btn-add-qual", disabled=True)
-    st.caption("※ 登録はまだ作っていません")
-
-    st.divider()
-    st.caption("**使い方で迷ったら**\n\n不明な点は事務所までお問い合わせください。")
-
-
-lg = ledger()
-today = date.today()
-
-if nav != "社員の資格・健診":
-    st.title(nav)
-    st.info(f"{NOT_BUILT}。左の「社員の資格・健診」を選んでください。")
-    st.stop()
-
-
-# --- 見出しと集計 ---------------------------------------------------------
-
-summaries = summarize_by_subject(lg, today, kind="person")
-
-by_status: dict[str, list[SubjectSummary]] = {key: [] for key, _, _, _ in SECTIONS}
-clear: list[SubjectSummary] = []
-for s in summaries:
-    if s.worst in by_status:
-        by_status[s.worst].append(s)
-    else:
-        clear.append(s)
-
-if _flash:
-    st.success(_flash, icon="✅")
-
-st.title("社員の資格・健診")
-st.caption(
-    "期限切れ → 日付未入力・期限計算不可 → 期限間近 の順に表示します。"
-    "上から順に確認してください。"
-)
-
-tiles = st.columns(4)
-for (key, mark, label, note), slot in zip(SECTIONS, tiles):
-    with slot.container(border=True):
-        st.markdown(f"{mark} **{label}**")
-        st.markdown(f"# {len(by_status[key])}人")
-        st.caption(note)
-with tiles[3].container(border=True):
-    st.markdown("🟢 **問題なし**")
-    st.markdown(f"# {len(clear)}人")
-    st.caption("期限切れ・期限間近はありません")
-
-
-# --- 検索と表示範囲 -------------------------------------------------------
-
-left, right = st.columns([1, 1])
-
-with left:
-    st.markdown("**氏名で検索**　:gray[(表示範囲に関係なく全員から検索します)]")
-    keyword = st.text_input(
-        "氏名で検索",
-        placeholder="例：東 亮",
-        label_visibility="collapsed",
-        key="search",
-    ).strip()
-
-with right:
-    st.markdown("**表示範囲を選んでください**")
-    st.radio(
-        "表示範囲",
-        ["対応が必要な人だけ", "全員"],
-        horizontal=True,
-        label_visibility="collapsed",
-        key="scope",
-        captions=[
-            "期限切れ・期限間近・日付未入力の人を表示",
-            "問題なしの人も含めて全員を表示",
-        ],
-    )
-
-
 def draw_grid(items: list[SubjectSummary]) -> None:
     for start in range(0, len(items), CARDS_PER_ROW):
         slots = st.columns(CARDS_PER_ROW)
@@ -204,66 +162,19 @@ def draw_grid(items: list[SubjectSummary]) -> None:
             draw_card(summary, slot)
 
 
-# --- 一覧 -----------------------------------------------------------------
-#
-# 検索は絞り込みを飛び越える。「対応が必要な人だけ」を表示していても、
-# 名前を打てば全員から探す。打ったのに出てこない状態を作らないため。
+def draw_selected_person() -> None:
+    """選んだ人の中身。開閉ではなく、常にある領域の中身が入れ替わる。"""
+    st.divider()
+    st.markdown("#### 選んだ人")
 
-if keyword:
-    hits = [
-        s for s in summaries
-        if keyword in s.subject.name
-        or keyword in s.subject.name.replace(" ", "")
-        or keyword in s.subject.site
-    ]
-    st.markdown(f"##### 🔍 「{keyword}」の検索結果　{len(hits)}人")
-    if hits:
-        st.caption("表示範囲の設定に関係なく、全員から探しています。")
-        draw_grid(hits)
-    else:
-        st.warning(f"「{keyword}」に一致する人は登録されていません。")
-        st.caption(f"※ 新しく登録する機能は{NOT_BUILT}。")
-else:
-    shown_clear = st.session_state.get("scope") == "全員"
+    selected_id = st.session_state.get("selected")
+    selected = lg.subject(selected_id) if selected_id else None
 
-    any_shown = False
-    for key, mark, label, _ in SECTIONS:
-        items = by_status[key]
-        if not items:
-            continue
-        any_shown = True
-        st.markdown(f"##### {mark} {label}　{len(items)}人")
-        draw_grid(items)
+    with st.container(border=True):
+        if selected is None:
+            st.write("上のカードの「資格・健診を確認」を押すと、その人の資格がここに出ます。")
+            return
 
-    if shown_clear and clear:
-        any_shown = True
-        st.markdown(f"##### 🟢 問題なし　{len(clear)}人")
-        draw_grid(clear)
-
-    if not any_shown:
-        st.success("対応が必要な人はいません。")
-
-    if not shown_clear and clear:
-        note, action = st.columns([3, 1])
-        note.info(f"問題なしの人が{len(clear)}人います。「全員」を選ぶと表示できます。")
-        if action.button("全員を表示する", width="stretch", key="btn-show-all"):
-            st.session_state["_request_show_all"] = True
-            st.rerun()
-
-
-# --- 下部：選んだ人 -------------------------------------------------------
-# 開閉ではなく、常にここにある領域の中身が入れ替わる。
-
-st.divider()
-st.markdown("#### 選んだ人")
-
-selected_id = st.session_state.get("selected")
-selected = lg.subject(selected_id) if selected_id else None
-
-with st.container(border=True):
-    if selected is None:
-        st.write("上のカードの「資格・健診を確認」を押すと、その人の資格がここに出ます。")
-    else:
         head, close = st.columns([4, 1])
         head.markdown(f"##### {selected.name}")
         head.caption(f"{selected.site} ／ {selected.role}")
@@ -330,6 +241,217 @@ with st.container(border=True):
                                 "次回の期限を計算し直しました。"
                             )
                             st.rerun()
+
+
+def page_people() -> None:
+    summaries = summarize_by_subject(lg, today, kind="person")
+
+    by_status: dict[str, list[SubjectSummary]] = {key: [] for key, _, _, _ in SECTIONS}
+    clear: list[SubjectSummary] = []
+    for s in summaries:
+        if s.worst in by_status:
+            by_status[s.worst].append(s)
+        else:
+            clear.append(s)
+
+    if _flash:
+        st.success(_flash, icon="✅")
+
+    st.title(PAGE_PEOPLE)
+    st.caption(
+        "期限切れ → 日付未入力・期限計算不可 → 期限間近 の順に表示します。"
+        "上から順に確認してください。"
+    )
+
+    tiles = st.columns(4)
+    for (key, mark, label, note), slot in zip(SECTIONS, tiles):
+        with slot.container(border=True):
+            st.markdown(f"{mark} **{label}**")
+            st.markdown(f"# {len(by_status[key])}人")
+            st.caption(note)
+    with tiles[3].container(border=True):
+        st.markdown("🟢 **問題なし**")
+        st.markdown(f"# {len(clear)}人")
+        st.caption("期限切れ・期限間近はありません")
+
+    left, right = st.columns([1, 1])
+
+    with left:
+        st.markdown("**氏名で検索**　:gray[(表示範囲に関係なく全員から検索します)]")
+        keyword = st.text_input(
+            "氏名で検索",
+            placeholder="例：東 亮",
+            label_visibility="collapsed",
+            key="search",
+        ).strip()
+
+    with right:
+        st.markdown("**表示範囲を選んでください**")
+        st.radio(
+            "表示範囲",
+            ["対応が必要な人だけ", "全員"],
+            horizontal=True,
+            label_visibility="collapsed",
+            key="scope",
+            captions=[
+                "期限切れ・期限間近・日付未入力の人を表示",
+                "問題なしの人も含めて全員を表示",
+            ],
+        )
+
+    # 検索は絞り込みを飛び越える。「対応が必要な人だけ」を表示していても、
+    # 名前を打てば全員から探す。打ったのに出てこない状態を作らないため。
+    if keyword:
+        hits = [
+            s for s in summaries
+            if keyword in s.subject.name
+            or keyword in s.subject.name.replace(" ", "")
+            or keyword in s.subject.site
+        ]
+        st.markdown(f"##### 🔍 「{keyword}」の検索結果　{len(hits)}人")
+        if hits:
+            st.caption("表示範囲の設定に関係なく、全員から探しています。")
+            draw_grid(hits)
+        else:
+            st.warning(f"「{keyword}」に一致する人は登録されていません。")
+            st.caption(f"※ 新しく登録する機能は{NOT_BUILT}。")
+    else:
+        shown_clear = st.session_state.get("scope") == "全員"
+
+        any_shown = False
+        for key, mark, label, _ in SECTIONS:
+            items = by_status[key]
+            if not items:
+                continue
+            any_shown = True
+            st.markdown(f"##### {mark} {label}　{len(items)}人")
+            draw_grid(items)
+
+        if shown_clear and clear:
+            any_shown = True
+            st.markdown(f"##### 🟢 問題なし　{len(clear)}人")
+            draw_grid(clear)
+
+        if not any_shown:
+            st.success("対応が必要な人はいません。")
+
+        if not shown_clear and clear:
+            note, action = st.columns([3, 1])
+            note.info(f"問題なしの人が{len(clear)}人います。「全員」を選ぶと表示できます。")
+            if action.button("全員を表示する", width="stretch", key="btn-show-all"):
+                st.session_state["_request_show_all"] = True
+                st.rerun()
+
+    draw_selected_person()
+
+
+# --- 安全書類の提出前チェック ---------------------------------------------
+
+
+def draw_issue_group(rows: list[Row]) -> None:
+    """引っかかる項目を人ごとにまとめて出す。作業員名簿が人単位で作られるため。"""
+    by_person: dict[str, list[Row]] = {}
+    for row in rows:
+        by_person.setdefault(row.subject.name, []).append(row)
+
+    for name, items in by_person.items():
+        head = items[0].subject
+        with st.container(border=True):
+            st.markdown(f"**{name}**　:gray[{head.site} ／ {head.role}]")
+            for row in items:
+                st.write(f"　・{row.requirement.name}：{reason_text(row)}")
+
+
+def page_submission() -> None:
+    st.title(PAGE_SUBMISSION)
+    st.markdown(
+        "**作った日ではなく、出す日で見ます。**\n\n"
+        "健康診断や資格証は、書類を作った時点では有効でも、提出日や工期の終わりには"
+        "切れていることがあります。元請から差し戻される原因の多くがこれです。"
+        "提出する日を入れて、その日に引っかかるものを先に洗い出してください。"
+    )
+
+    setting, target = st.columns([1, 2])
+
+    with setting:
+        st.markdown("**いつ提出しますか**")
+        st.caption("工期の終わりで見る場合は、その日を入れてください")
+        target_date = st.date_input(
+            "提出予定日",
+            value=today,
+            label_visibility="collapsed",
+            key="submit-date",
+        )
+
+    people = [s for s in lg.subjects if s.kind == "person"]
+    name_to_id = {s.name: s.id for s in people}
+
+    with target:
+        st.markdown("**現場に出す人**")
+        st.caption("選ばなければ、全員を見ます")
+        picked = st.multiselect(
+            "現場に出す人",
+            list(name_to_id.keys()),
+            label_visibility="collapsed",
+            key="submit-people",
+        )
+
+    subject_ids = [name_to_id[n] for n in picked] if picked else None
+
+    if target_date < today:
+        st.warning("過去の日付が入っています。これから提出する日を入れてください。")
+        return
+
+    issues = submission_check(lg, target_date=target_date, subject_ids=subject_ids)
+
+    scope_text = f"選んだ{len(picked)}人" if picked else f"全員（{len(people)}人）"
+    st.caption(f"対象：{scope_text}")
+
+    if not issues:
+        st.success(
+            f"{jp_date(target_date)} に提出しても、引っかかる項目はありません。",
+            icon="✅",
+        )
+        return
+
+    # 今日すでに切れているものと、その日までに切れるものを分ける。
+    # 後者はこの画面でしか気づけない。社員の一覧では今日の状態しか見えないため。
+    today_ids = {
+        r.holding.id
+        for r in submission_check(lg, target_date=today, subject_ids=subject_ids)
+    }
+    already = [r for r in issues if r.holding.id in today_ids]
+    upcoming = [r for r in issues if r.holding.id not in today_ids]
+
+    st.error(
+        f"{jp_date(target_date)} に提出すると、{len(issues)}件が引っかかります。",
+        icon="⚠️",
+    )
+
+    if upcoming:
+        st.markdown(f"##### 🟠 その日までに切れるもの　{len(upcoming)}件")
+        st.caption(
+            "今日の時点ではまだ有効です。社員の一覧を見ているだけでは気づけません。"
+        )
+        draw_issue_group(upcoming)
+
+    if already:
+        st.markdown(f"##### 🔴 今日すでに引っかかっているもの　{len(already)}件")
+        st.caption("提出する日に関係なく、いま対応が必要です。")
+        draw_issue_group(already)
+
+
+# --- 振り分け -------------------------------------------------------------
+
+if nav == PAGE_PEOPLE:
+    page_people()
+elif nav == PAGE_SUBMISSION:
+    page_submission()
+else:
+    st.title(nav)
+    st.info(
+        f"{NOT_BUILT}。左の「{PAGE_PEOPLE}」か「{PAGE_SUBMISSION}」を選んでください。"
+    )
 
 st.caption(
     "※ このデモの変更はブラウザのセッション内にのみ保持され、保存されません。"
