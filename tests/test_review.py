@@ -399,3 +399,32 @@ def test_同梱データが読めて整合している():
     assert counts["overdue"] > 0
     assert counts["unknown"] > 0
     assert counts["due_soon"] > 0
+
+
+# --- しきい値の不変条件 ---------------------------------------------------
+
+
+def test_間近の日数を上げると予告の日数も一緒に上がる():
+    """呼び出す側に揃える責任を持たせると、いつか揃え忘れて落ちる。"""
+    lg = make_ledger()
+    assert lg.soon_days == 30 and lg.upcoming_days == 60
+
+    lg.set_soon_days(90)
+    assert lg.soon_days == 90
+    assert lg.upcoming_days == 90
+
+    # 例外にならずに判定できること。
+    build_rows(lg, TODAY)
+
+
+def test_間近の日数を下げても予告は下がらない():
+    lg = make_ledger()
+    lg.set_soon_days(7)
+    assert lg.soon_days == 7
+    assert lg.upcoming_days == 60
+
+
+def test_間近の日数に0以下は拒否する():
+    lg = make_ledger()
+    with pytest.raises(ValueError):
+        lg.set_soon_days(0)

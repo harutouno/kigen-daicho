@@ -229,6 +229,18 @@ class Ledger:
     soon_days: int = 30
     upcoming_days: int = 60
 
+    def set_soon_days(self, days: int) -> None:
+        """『期限間近』とする日数を変える。
+
+        『予告』の日数を追い越すと Thresholds が例外を出すため、ここで一緒に
+        引き上げる。この決まりを呼び出す側に持たせると、呼ぶ場所が増えたときに
+        揃え忘れて落ちる。不変条件はデータを持っている側で守る。
+        """
+        if days < 1:
+            raise ValueError("『期限間近』とする日数は 1 日以上で指定してください")
+        self.soon_days = days
+        self.upcoming_days = max(self.upcoming_days, days)
+
     def requirement(self, requirement_id: str) -> Requirement | None:
         return next((r for r in self.requirements if r.id == requirement_id), None)
 

@@ -13,11 +13,19 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date
 
 import streamlit as st
 
-from core.models import CATEGORY_LABEL, OBLIGATION_LABEL, Ledger, Record
+from core.models import (
+    CATEGORY_LABEL,
+    DATE_MODE_LABEL,
+    OBLIGATION_LABEL,
+    Ledger,
+    Record,
+    Requirement,
+)
 from core.review import (
     Row,
     SubjectSummary,
@@ -441,12 +449,113 @@ def page_submission() -> None:
         draw_issue_group(already)
 
 
+# --- 種類の設定 -----------------------------------------------------------
+
+
+def draw_requirement(req: Requirement) -> None:
+    """種類 1 件。周期を持つものは、ここで周期を変えられる。"""
+    with st.container(border=True):
+        head, cycle = st.columns([3, 1])
+
+        with head:
+            st.markdown(f"**{req.name}**")
+            st.caption(
+                f"{OBLIGATION_LABEL[req.obligation]}　／　"
+                f"{DATE_MODE_LABEL[req.date_mode]}"
+            )
+            if req.source:
+                st.write(f"根拠：{req.source}")
+            if req.note:
+                st.caption(req.note)
+
+        with cycle:
+            if req.date_mode != "cycle":
+                st.caption("周期では決まりません")
+                return
+
+            months = st.number_input(
+                "周期（か月）",
+                min_value=1,
+                max_value=120,
+                value=req.cycle_months or 12,
+                key=f"cycle-{req.id}",
+            )
+            if months != req.cycle_months:
+                # 凍結した値なので差し替える。変更はその場で全画面に効く。
+                index = lg.requirements.index(req)
+                lg.requirements[index] = replace(req, cycle_months=int(months))
+                st.rerun()
+
+
+def page_types() -> None:
+    st.title(PAGE_TYPES)
+    st.markdown(
+        "**周期も警告のタイミングも、プログラムには書き込んでいません。**\n\n"
+        "点検や講習の周期は、設備の条件や契約、社内の規程によって変わります。"
+        "外から決め打ちできるものではないので、ここで変えられるようにしてあります。"
+        "ここで変えた値が、そのまま判定に使われます。"
+    )
+
+    st.markdown("##### 警告のタイミング")
+    with st.container(border=True):
+        left, right = st.columns([1, 3])
+        with left:
+            soon = st.number_input(
+                "何日前から「期限間近」とするか",
+                min_value=1,
+                max_value=365,
+                value=lg.soon_days,
+                key="setting-soon",
+            )
+        with right:
+            st.caption(
+                f"いまは期限の{lg.soon_days}日前から「期限間近」として扱っています。"
+                "この日数を変えると、社員の一覧と提出前チェックの結果がすぐに変わります。"
+            )
+        if soon != lg.soon_days:
+            lg.set_soon_days(int(soon))
+            st.rerun()
+
+    with_deadline = [r for r in lg.requirements if r.has_deadline]
+    without_deadline = [r for r in lg.requirements if not r.has_deadline]
+
+    for category, label in (
+        ("qualification", "資格・講習・健診"),
+        ("inspection", "点検・校正"),
+    ):
+        items = [r for r in with_deadline if r.category == category]
+        if not items:
+            continue
+        st.markdown(f"##### {label}　{len(items)}種類")
+        for req in items:
+            draw_requirement(req)
+
+    if without_deadline:
+        st.markdown(f"##### 有効期限がない種類　{len(without_deadline)}種類")
+        st.caption(
+            "電気主任技術者の免状などには有効期限がありません。"
+            "誰が持っているかを把握するために登録しますが、期限としては扱わず、"
+            "警告にも混ぜません。**期限のないものを期限として並べると、"
+            "台帳そのものが信用されなくなるためです。**"
+        )
+        for req in without_deadline:
+            draw_requirement(req)
+
+    st.info(
+        "種類そのものの追加・削除は、まだ作っていません。"
+        "いまできるのは、周期と警告のタイミングの変更です。",
+        icon="ℹ️",
+    )
+
+
 # --- 振り分け -------------------------------------------------------------
 
 if nav == PAGE_PEOPLE:
     page_people()
 elif nav == PAGE_SUBMISSION:
     page_submission()
+elif nav == PAGE_TYPES:
+    page_types()
 else:
     st.title(nav)
     st.info(
