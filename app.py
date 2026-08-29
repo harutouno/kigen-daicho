@@ -22,11 +22,13 @@ from core.models import (
     CATEGORY_LABEL,
     DATE_MODE_LABEL,
     OBLIGATION_LABEL,
+    Holding,
     Ledger,
     Record,
     Requirement,
 )
 from core.review import (
+    STATUS_ORDER,
     Row,
     SubjectSummary,
     build_rows,
@@ -128,8 +130,12 @@ with st.sidebar:
 
     st.markdown("**登録**")
     st.button(add_labels[0], width="stretch", key="btn-add-subject", disabled=True)
-    st.button(add_labels[1], width="stretch", key="btn-add-holding", disabled=True)
-    st.caption("※ 登録はまだ作っていません")
+    st.caption(
+        "※ 新規の登録はまだ作っていません。"
+        + ("既存の道具への点検の追加は、その道具を開いてできます。"
+           if nav == PAGE_ASSETS
+           else "既存の社員への資格の追加は、その人を開いてできます。")
+    )
 
     st.divider()
     st.caption("**使い方で迷ったら**\n\n不明な点は事務所までお問い合わせください。")
@@ -179,6 +185,8 @@ def draw_card(summary: SubjectSummary, slot) -> None:
             width="stretch",
         ):
             st.session_state["selected"] = subject.id
+            st.session_state.pop("recording", None)
+            st.rerun()
 
 
 def draw_grid(items: list[SubjectSummary]) -> None:
@@ -188,112 +196,345 @@ def draw_grid(items: list[SubjectSummary]) -> None:
             draw_card(summary, slot)
 
 
-def draw_selected(kind: str) -> None:
-    """選んだ対象の中身。開閉ではなく、常にある領域の中身が入れ替わる。"""
+def state_label(row: Row) -> str:
+    """行の状態を、色と言葉の両方で表す。
+
+    有効期限が存在しない資格は「未確定」ではない。分かっていないのではなく、
+    そもそも期限が無い。混ぜると、本当に日付が入っていない行が埋もれる。
+    """
+    if not row.requirement.has_deadline:
+        return "🔵 有効（期限なし）"
+    return STATUS_TEXT[row.status]
+
+
+def deadline_text(row: Row) -> str:
+    """期限、または期限が出せない理由。"""
+    if not row.requirement.has_deadline:
+        return "有効期限の定めなし"
+    if row.due_on is not None:
+        return f"期限：{jp_date(row.due_on)}"
+    last = row.holding.last_done_on
+    if last is None:
+        return "前回実施日：未入力"
+    return f"前回実施日：{jp_date(last)}"
+
+
+def situation_text(row: Row) -> str:
+    """残り日数、または次にやること。"""
+    if not row.requirement.has_deadline:
+        return "期限の定めなし"
+    if row.due_on is None:
+        return "前回の日付を入力してください"
+    days = row.days_left or 0
+    return f"{-days}日超過" if days < 0 else f"あと{days}日"
+
+
+def sort_for_detail(rows: list[Row]) -> list[Row]:
+    """詳細の表の並び。危ないものほど上。期限を持たないものは最後。
+
+    build_rows は期日の無い行を先頭に置く（放置されやすいため）が、
+    有効期限が存在しない資格まで先頭に来ると、本当に危ない行が下へ押し下げられる。
+    """
+    def key(row: Row) -> tuple[int, int, date]:
+        if not row.requirement.has_deadline:
+            return (1, 0, date.max)
+        return (0, STATUS_ORDER[row.status], row.due_on or date.min)
+
+    return sorted(rows, key=key)
+
+
+def count_states(rows: list[Row]) -> dict[str, int]:
+    """1 人（1 台）の中での状態別件数。"""
+    counts = {"overdue": 0, "unknown": 0, "due_soon": 0, "ok": 0, "no_deadline": 0}
+    for row in rows:
+        if not row.requirement.has_deadline:
+            counts["no_deadline"] += 1
+        elif row.status in ("overdue", "unknown", "due_soon"):
+            counts[row.status] += 1
+        else:
+            counts["ok"] += 1
+    return counts
+
+
+DETAIL_TILES = [
+    ("overdue", "🔴 期限切れ", "すぐに対応が必要です"),
+    ("unknown", "⚪ 日付未入力・期限計算不可", "日付の入力が必要です"),
+    ("due_soon", "🟠 期限間近（30日以内）", "期限が近づいています"),
+    ("ok", "🟢 問題なし", "期限内です"),
+    ("no_deadline", "🔵 有効（期限なし）", "有効期限の定めなし"),
+]
+
+
+def draw_detail(kind: str) -> None:
+    """選んだ 1 件の詳細。一覧とは別の画面として出す。"""
     is_asset = kind == "asset"
-    heading = "選んだ道具・機器" if is_asset else "選んだ人"
-    empty = (
-        "上のカードの「点検の記録を見る」を押すと、その道具の点検がここに出ます。"
-        if is_asset
-        else "上のカードの「資格・健診を確認」を押すと、その人の資格がここに出ます。"
+    selected = lg.subject(st.session_state["selected"])
+
+    back, edit = st.columns([3, 1])
+    if back.button(
+        "← 一覧に戻る（道具・機器一覧へ）" if is_asset else "← 一覧に戻る（社員一覧へ）",
+        key="btn-back",
+    ):
+        st.session_state.pop("selected", None)
+        st.rerun()
+    edit.button(
+        "この道具の情報を編集する" if is_asset else "この人の情報を編集する",
+        key="btn-edit-subject",
+        width="stretch",
+        disabled=True,
     )
 
-    st.divider()
-    st.markdown(f"#### {heading}")
+    if _flash:
+        st.success(_flash, icon="✅")
 
-    selected_id = st.session_state.get("selected")
-    selected = lg.subject(selected_id) if selected_id else None
-    # 人の画面で選んだものが道具の画面に残らないようにする。
-    if selected is not None and selected.kind != kind:
-        selected = None
+    rows = sort_for_detail(
+        [r for r in build_rows(lg, today) if r.subject.id == selected.id]
+    )
+    counts = count_states(rows)
 
-    with st.container(border=True):
-        if selected is None:
-            st.write(empty)
-            return
+    head, status = st.columns([1, 2])
 
-        head, close = st.columns([4, 1])
-        head.markdown(f"##### {selected.name}")
+    with head.container(border=True):
+        title = selected.name
+        if selected.kana:
+            title += f"　:gray[（{selected.kana}）]"
+        st.markdown(f"### {title}")
         if is_asset:
-            head.caption(f"管理番号：{selected.code}　／　{selected.site}")
+            st.write(f"管理番号　{selected.code}")
             if selected.model:
-                head.caption(f"型番：{selected.model}")
+                st.write(f"型番　　　{selected.model}")
+            st.write(f"保管場所　{selected.site}")
         else:
-            head.caption(f"{selected.site} ／ {selected.role}")
-        if close.button("閉じる", width="stretch", key="btn-close-detail"):
-            st.session_state.pop("selected", None)
-            st.rerun()
+            st.write(f"社員番号　{selected.code}")
+            st.write(f"所属　　　{selected.site} ／ {selected.role}")
 
-        rows = [r for r in build_rows(lg, today) if r.subject.id == selected.id]
-        if not rows:
-            st.info(
-                "この道具には点検がまだ登録されていません。"
-                if is_asset
-                else "この人には資格・講習・健診がまだ登録されていません。"
+    with status:
+        st.markdown("**この人の状況**" if not is_asset else "**この道具の状況**")
+        tiles = st.columns(len(DETAIL_TILES))
+        for (key, label, note), slot in zip(DETAIL_TILES, tiles):
+            with slot.container(border=True):
+                st.markdown(f"{label}")
+                st.markdown(f"### {counts[key]}件")
+                st.caption(note)
+
+    # 最優先の 1 件。一覧のカードに出しているものと同じ行を、詳細でも先頭に出す。
+    urgent = [r for r in rows if r.blocks_assignment or r.status == "due_soon"]
+    if urgent:
+        top = urgent[0]
+        st.markdown("##### 最も優先して対応が必要なもの")
+        with st.container(border=True):
+            c1, c2, c3, c4 = st.columns([2, 2, 1.5, 1.5])
+            c1.markdown(f"{state_label(top)}\n\n**{top.requirement.name}**")
+            c2.write(deadline_text(top))
+            c3.write(situation_text(top))
+            c4.write(
+                f"次回予定日：{jp_date(top.holding.planned_on)}"
+                if top.holding.planned_on
+                else "次回予定日：未入力"
             )
 
-        for row in rows:
-            with st.container(border=True):
-                info, action = st.columns([3, 2])
+    title, add = st.columns([3, 1])
+    title.markdown(
+        "##### 資格・講習・健診の一覧" if not is_asset else "##### 点検・校正の一覧"
+    )
+    if add.button(
+        "＋ 点検・校正を追加する" if is_asset else "＋ 資格・講習・健診を追加する",
+        key="btn-open-add",
+        width="stretch",
+    ):
+        st.session_state["adding"] = selected.id
+        st.rerun()
 
-                with info:
-                    st.markdown(f"**{row.requirement.name}**")
-                    st.caption(
-                        f"{CATEGORY_LABEL[row.requirement.category]}／"
-                        f"{OBLIGATION_LABEL[row.requirement.obligation]}"
-                    )
-                    st.write(STATUS_TEXT[row.status])
+    st.caption(
+        "登録されているすべての記録です。次回予定日の入力と、実施の記録ができます。"
+    )
 
-                    if not row.requirement.has_deadline:
-                        st.caption("この資格に有効期限はありません（保有の記録）")  # noqa: E501
-                    elif row.due_on is None:
-                        st.caption("前回の日付が入っていないため、次回の期日を出せません")
-                    else:
-                        st.write(
-                            f"期限：{jp_date(row.due_on)} {remaining_text(row.days_left)}"
-                        )
+    draw_add_form(selected, rows, is_asset)
 
-                    last = row.holding.last_done_on
-                    if row.requirement.date_mode == "cycle":
-                        st.caption(
-                            f"前回：{jp_date(last) if last else '未入力'}"
-                            f"　周期：{row.requirement.cycle_months}か月"
-                        )
+    widths = [1.1, 2.4, 1.6, 1.7, 1.3, 1.4, 0.9]
+    header = st.columns(widths)
+    for slot, label in zip(
+        header,
+        ["種別", "名称", "状態", "期限／前回実施日", "残り日数・状況", "次回予定日", "記録"],
+    ):
+        slot.caption(f"**{label}**")
 
-                with action:
-                    if row.requirement.date_mode != "cycle":
-                        st.caption(
-                            "実施日ではなく、車検証・証に記載の期限で管理する項目です"
-                            if is_asset
-                            else "実施日ではなく、証に記載の期限で管理する項目です"
-                        )
-                        continue
+    for row in rows:
+        cols = st.columns(widths)
+        cols[0].caption(OBLIGATION_LABEL[row.requirement.obligation])
+        cols[1].write(row.requirement.name)
+        cols[2].write(state_label(row))
+        cols[3].write(deadline_text(row))
+        cols[4].write(situation_text(row))
 
-                    done_on = st.date_input(
-                        "実施した日",
-                        value=today,
-                        key=f"done-{row.holding.id}",
-                    )
-                    if st.button(
-                        "実施を記録する",
-                        key=f"rec-{row.holding.id}",
-                        width="stretch",
-                    ):
-                        try:
-                            validate_done_on(done_on, today)
-                        except ScheduleError as e:
-                            st.error(str(e))
-                        else:
-                            row.holding.add_record(Record(done_on=done_on))
-                            st.session_state["_flash"] = (
-                                f"{selected.name} の {row.requirement.name} に "
-                                f"{jp_date(done_on)} の実施を記録しました。"
-                                "次回の期限を計算し直しました。"
-                            )
-                            st.rerun()
+        if not row.requirement.has_deadline:
+            # 期限が無いものに次回予定日は無い。入力欄も出さない。
+            cols[5].write("—")
+            cols[6].write("—")
+            continue
+
+        planned = cols[5].date_input(
+            "次回予定日",
+            value=row.holding.planned_on,
+            key=f"plan-{row.holding.id}",
+            label_visibility="collapsed",
+        )
+        if planned != row.holding.planned_on:
+            row.holding.planned_on = planned
+            st.rerun()
+
+        if row.requirement.date_mode == "cycle":
+            if cols[6].button("記録", key=f"open-rec-{row.holding.id}", width="stretch"):
+                st.session_state["recording"] = row.holding.id
+                st.rerun()
+        else:
+            cols[6].write("—")
+
+    draw_record_form(rows)
+
+    st.divider()
+    st.caption(
+        "・「期限切れ」または「日付未入力・期限計算不可」の記録がある場合、"
+        "安全書類を提出する前に対応してください。"
+    )
+    st.caption(
+        "・「有効（期限なし）」は有効期限の定めがない資格・免状です（更新義務はありません）。"
+    )
+    st.caption(
+        "・次回予定日は受講や点検の予約が取れている日です。期限の判定には使いません。"
+        "予定を実績として扱うと、超過が隠れてしまうためです。"
+    )
+
+
+def draw_add_form(subject, rows: list[Row], is_asset: bool) -> None:
+    """この対象に、まだ持っていない種類を追加する。"""
+    if st.session_state.get("adding") != subject.id:
+        return
+
+    category = "inspection" if is_asset else "qualification"
+    already = {r.requirement.id for r in rows}
+    choices = [
+        r for r in lg.requirements
+        if r.category == category and r.id not in already
+    ]
+
+    with st.container(border=True):
+        if not choices:
+            st.info("追加できる種類がありません。すべて登録済みです。")
+            if st.button("閉じる", key="btn-close-add"):
+                st.session_state.pop("adding", None)
+                st.rerun()
+            return
+
+        st.markdown(f"**{subject.name}** に追加する")
+
+        by_name = {r.name: r for r in choices}
+        picked_name = st.selectbox(
+            "追加する種類", list(by_name.keys()), key="add-requirement"
+        )
+        req = by_name[picked_name]
+
+        st.caption(
+            f"{OBLIGATION_LABEL[req.obligation]}／{DATE_MODE_LABEL[req.date_mode]}"
+            + (f"　周期：{req.cycle_months}か月" if req.cycle_months else "")
+        )
+        if req.source:
+            st.caption(f"根拠：{req.source}")
+
+        fixed_due: date | None = None
+        last_done: date | None = None
+
+        if req.date_mode == "fixed":
+            st.write("証に記載されている有効期限を入力してください。")
+            fixed_due = st.date_input(
+                "有効期限", value=None, key="add-fixed-due"
+            )
+        elif req.date_mode == "cycle":
+            st.write(
+                "前回の実施日が分かれば入力してください。"
+                "分からない場合は空のままで構いません（「日付未入力」として扱います）。"
+            )
+            last_done = st.date_input(
+                "前回の実施日", value=None, key="add-last-done"
+            )
+        else:
+            st.write("この種類に有効期限はありません。保有の記録として登録します。")
+
+        do, cancel = st.columns([1, 1])
+        if do.button("追加する", type="primary", width="stretch", key="btn-do-add"):
+            if req.date_mode == "cycle" and last_done is not None:
+                try:
+                    validate_done_on(last_done, today)
+                except ScheduleError as e:
+                    st.error(str(e))
+                    return
+
+            records = (
+                [Record(done_on=last_done, done_by="", memo="登録時に入力")]
+                if last_done is not None
+                else []
+            )
+            lg.holdings.append(
+                Holding(
+                    id=f"h-new-{len(lg.holdings) + 1:04d}",
+                    subject_id=subject.id,
+                    requirement_id=req.id,
+                    fixed_due_on=fixed_due,
+                    records=records,
+                )
+            )
+            st.session_state.pop("adding", None)
+            st.session_state["_flash"] = f"{subject.name} に {req.name} を追加しました。"
+            st.rerun()
+
+        if cancel.button("やめる", width="stretch", key="btn-cancel-add"):
+            st.session_state.pop("adding", None)
+            st.rerun()
+
+
+def draw_record_form(rows: list[Row]) -> None:
+    """実施の記録。開閉ではなく、常にここにある領域の中身が入れ替わる。"""
+    target_id = st.session_state.get("recording")
+    target = next((r for r in rows if r.holding.id == target_id), None)
+
+    with st.container(border=True):
+        if target is None:
+            st.caption("表の「記録」を押すと、ここで実施日を入力できます。")
+            return
+
+        st.markdown(f"**{target.requirement.name}** の実施を記録する")
+        c1, c2, c3, c4 = st.columns([1.2, 1.2, 1, 1])
+        done_on = c1.date_input("実施した日", value=today, key=f"done-{target.holding.id}")
+        done_by = c2.text_input("実施者", value="", key=f"by-{target.holding.id}")
+
+        if c3.button("記録する", type="primary", width="stretch", key="btn-do-record"):
+            try:
+                validate_done_on(done_on, today)
+            except ScheduleError as e:
+                st.error(str(e))
+            else:
+                target.holding.add_record(Record(done_on=done_on, done_by=done_by))
+                # 実施したので、その予約はもう使わない。
+                target.holding.planned_on = None
+                st.session_state.pop("recording", None)
+                st.session_state["_flash"] = (
+                    f"{target.requirement.name} に {jp_date(done_on)} の実施を"
+                    "記録しました。次回の期限を計算し直しました。"
+                )
+                st.rerun()
+
+        if c4.button("やめる", width="stretch", key="btn-cancel-record"):
+            st.session_state.pop("recording", None)
+            st.rerun()
 
 
 def page_people() -> None:
+    selected_id = st.session_state.get("selected")
+    selected = lg.subject(selected_id) if selected_id else None
+    if selected is not None and selected.kind == "person":
+        draw_detail("person")
+        return
+
     summaries = summarize_by_subject(lg, today, kind="person")
 
     by_status: dict[str, list[SubjectSummary]] = {key: [] for key, _, _, _ in SECTIONS}
@@ -392,13 +633,18 @@ def page_people() -> None:
                 st.session_state["_request_show_all"] = "scope"
                 st.rerun()
 
-    draw_selected("person")
 
 
 # --- 道具・機器の点検 -----------------------------------------------------
 
 
 def page_assets() -> None:
+    selected_id = st.session_state.get("selected")
+    selected = lg.subject(selected_id) if selected_id else None
+    if selected is not None and selected.kind == "asset":
+        draw_detail("asset")
+        return
+
     summaries = summarize_by_subject(lg, today, kind="asset")
 
     by_status: dict[str, list[SubjectSummary]] = {key: [] for key, _, _, _ in SECTIONS}
@@ -494,7 +740,6 @@ def page_assets() -> None:
                 st.session_state["_request_show_all"] = "scope-asset"
                 st.rerun()
 
-    draw_selected("asset")
 
 # --- 安全書類の提出前チェック ---------------------------------------------
 

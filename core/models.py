@@ -123,13 +123,17 @@ class Subject:
     kind: Literal["person", "asset"]
     site: str = ""
     role: str = ""
-    code: str = ""
-    model: str = ""
+    code: str = ""      # 社員は社員番号、道具は管理番号
+    model: str = ""     # 道具の型番
+    kana: str = ""      # 社員のふりがな
 
     @property
     def search_text(self) -> str:
         """検索で引っかける対象。名称・保管場所に加え、道具は管理番号と型番でも引く。"""
-        parts = [self.name, self.name.replace(" ", ""), self.site, self.code, self.model]
+        parts = [
+            self.name, self.name.replace(" ", ""), self.site,
+            self.code, self.model, self.kana,
+        ]
         return " ".join(p for p in parts if p)
 
     @classmethod
@@ -142,6 +146,7 @@ class Subject:
             role=d.get("role", ""),
             code=d.get("code", ""),
             model=d.get("model", ""),
+            kana=d.get("kana", ""),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -153,6 +158,7 @@ class Subject:
             "role": self.role,
             "code": self.code,
             "model": self.model,
+            "kana": self.kana,
         }
 
 
@@ -192,6 +198,10 @@ class Holding:
     fixed_due_on: date | None = None
     records: list[Record] = field(default_factory=list)
     note: str = ""
+    # 受講や点検の予約が取れている場合の予定日。期日の計算には使わない。
+    # 「切れているが予約済み」と「切れていて何もしていない」は、対応が違うため
+    # 区別できるようにする。予定を実績として扱うと超過が隠れるので、判定には混ぜない。
+    planned_on: date | None = None
 
     @property
     def last_done_on(self) -> date | None:
@@ -222,6 +232,7 @@ class Holding:
             fixed_due_on=_to_date(d.get("fixed_due_on")),
             records=[Record.from_dict(r) for r in d.get("records", [])],
             note=d.get("note", ""),
+            planned_on=_to_date(d.get("planned_on")),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -232,6 +243,7 @@ class Holding:
             "fixed_due_on": _from_date(self.fixed_due_on),
             "records": [r.to_dict() for r in self.records],
             "note": self.note,
+            "planned_on": _from_date(self.planned_on),
         }
 
 

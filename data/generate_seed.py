@@ -53,6 +53,7 @@ def person(idx: int) -> dict:
         "kind": "person",
         "site": SITES[idx % len(SITES)],
         "role": ROLES[(idx * 3) % len(ROLES)],
+        "code": f"E-{idx:04d}",
     }
 
 
@@ -80,6 +81,7 @@ def build() -> dict:
                 "fixed_due_on": kw.get("fixed_due_on"),
                 "records": kw.get("records", []),
                 "note": kw.get("note", ""),
+                "planned_on": kw.get("planned_on"),
             }
         )
 
@@ -90,18 +92,26 @@ def build() -> dict:
     named = [
         # 資格者証は有効なのに講習だけ切れている。片方だけ見ると通してしまう例。
         {
-            "id": "p-001", "name": "迫田 和樹", "site": "鹿児島本社", "role": "施工管理",
+            "id": "p-001", "code": "E-0001", "kana": "さこだ かずき", "name": "迫田 和樹", "site": "鹿児島本社", "role": "施工管理",
             "holdings": [
                 ("req-kanri-cert", {"fixed_due_on": iso(TODAY + timedelta(days=214))}),
                 ("req-kanri-course", {"fixed_due_on": iso(TODAY - timedelta(days=29)),
-                                      "note": "資格者証は有効だが講習が切れている。"}),
+                                      "planned_on": iso(TODAY + timedelta(days=21)),
+                                      "note": "資格者証は有効だが講習が切れている。受講を予約済み。"}),
                 ("req-kenshin", {"records": [{"done_on": iso(TODAY - timedelta(days=192)),
                                               "done_by": "総務", "memo": "定期健診"}]}),
+                # 有効期限が存在しない資格・講習。保有の記録として持つが期限は発生しない。
+                ("req-den1-menjo", {}),
+                ("req-awp-skill", {}),
+                ("req-harness-edu", {}),
+                ("req-lowvolt-edu", {}),
+                ("req-highvolt-edu", {}),
+                ("req-shokucho-edu", {}),
             ],
         },
         # 健診が大きく超過している例。
         {
-            "id": "p-002", "name": "田中 新一", "site": "志布志支店", "role": "施工管理",
+            "id": "p-002", "code": "E-0002", "kana": "たなか しんいち", "name": "田中 新一", "site": "志布志支店", "role": "施工管理",
             "holdings": [
                 ("req-kenshin", {"records": [{"done_on": iso(TODAY - timedelta(days=476)),
                                               "done_by": "総務", "memo": "定期健診"}]}),
@@ -109,7 +119,7 @@ def build() -> dict:
         },
         # 定期講習が切れている例。
         {
-            "id": "p-003", "name": "山口 正人", "site": "川内支店", "role": "電気工事",
+            "id": "p-003", "code": "E-0003", "kana": "やまぐち まさと", "name": "山口 正人", "site": "川内支店", "role": "電気工事",
             "holdings": [
                 ("req-den1-course", {"records": [{"done_on": iso(TODAY - timedelta(days=1962)),
                                                   "done_by": "本人", "memo": "定期講習"}]}),
@@ -121,7 +131,7 @@ def build() -> dict:
         },
         # 前回受講日が台帳に無く、期日を計算できない例。
         {
-            "id": "p-004", "name": "東 亮", "site": "鹿児島本社", "role": "施工管理",
+            "id": "p-004", "code": "E-0004", "kana": "ひがし りょう", "name": "東 亮", "site": "鹿児島本社", "role": "施工管理",
             "holdings": [
                 ("req-den1-course", {"note": "免状は保有しているが前回の受講日が台帳に無い。"}),
                 ("req-den1-menjo", {}),
@@ -131,7 +141,7 @@ def build() -> dict:
         },
         # 同じく未確定。危険物の保安講習。
         {
-            "id": "p-005", "name": "中村 健一", "site": "国分支店", "role": "電気工事",
+            "id": "p-005", "code": "E-0005", "kana": "なかむら けんいち", "name": "中村 健一", "site": "国分支店", "role": "電気工事",
             "holdings": [
                 ("req-kikenbutsu-course", {"note": "従事開始時の受講日が不明。"}),
                 ("req-kenshin", {"records": [{"done_on": iso(TODAY - timedelta(days=52)),
@@ -140,14 +150,14 @@ def build() -> dict:
         },
         # 期限が近い人たち。
         {
-            "id": "p-006", "name": "山下 太郎", "site": "鹿児島本社", "role": "施工管理",
+            "id": "p-006", "code": "E-0006", "kana": "やました たろう", "name": "山下 太郎", "site": "鹿児島本社", "role": "施工管理",
             "holdings": [
                 ("req-kenshin", {"records": [{"done_on": iso(TODAY - timedelta(days=353)),
                                               "done_by": "総務", "memo": "定期健診"}]}),
             ],
         },
         {
-            "id": "p-007", "name": "佐藤 龍也", "site": "志布志支店", "role": "電気工事",
+            "id": "p-007", "code": "E-0007", "kana": "さとう たつや", "name": "佐藤 龍也", "site": "志布志支店", "role": "電気工事",
             "holdings": [
                 ("req-den1-course", {"records": [{"done_on": iso(TODAY - timedelta(days=1804)),
                                                   "done_by": "本人", "memo": "定期講習"}]}),
@@ -155,7 +165,7 @@ def build() -> dict:
             ],
         },
         {
-            "id": "p-008", "name": "松本 裕介", "site": "川内支店", "role": "施工管理",
+            "id": "p-008", "code": "E-0008", "kana": "まつもと ゆうすけ", "name": "松本 裕介", "site": "川内支店", "role": "施工管理",
             "holdings": [
                 ("req-kenshin", {"records": [{"done_on": iso(TODAY - timedelta(days=338)),
                                               "done_by": "総務", "memo": "定期健診"}]}),
@@ -163,14 +173,14 @@ def build() -> dict:
             ],
         },
         {
-            "id": "p-009", "name": "加藤 由美", "site": "姶良支店", "role": "事務",
+            "id": "p-009", "code": "E-0009", "kana": "かとう ゆみ", "name": "加藤 由美", "site": "姶良支店", "role": "事務",
             "holdings": [
                 ("req-kenshin", {"records": [{"done_on": iso(TODAY - timedelta(days=335)),
                                               "done_by": "総務", "memo": "定期健診"}]}),
             ],
         },
         {
-            "id": "p-010", "name": "今村 和也", "site": "苓北支店", "role": "電気工事",
+            "id": "p-010", "code": "E-0010", "kana": "いまむら かずや", "name": "今村 和也", "site": "苓北支店", "role": "電気工事",
             "holdings": [
                 ("req-kikenbutsu-course", {"records": [{"done_on": iso(TODAY - timedelta(days=1064)),
                                                         "done_by": "本人", "memo": "保安講習"}]}),
@@ -180,7 +190,7 @@ def build() -> dict:
         },
         # 監理技術者として配置できる人（比較用）。
         {
-            "id": "p-011", "name": "有村 千尋", "site": "鹿児島本社", "role": "保守・計装",
+            "id": "p-011", "code": "E-0011", "kana": "ありむら ちひろ", "name": "有村 千尋", "site": "鹿児島本社", "role": "保守・計装",
             "holdings": [
                 ("req-kanri-cert", {"fixed_due_on": iso(TODAY + timedelta(days=1189))}),
                 ("req-kanri-course", {"fixed_due_on": iso(TODAY + timedelta(days=1220))}),
@@ -191,7 +201,7 @@ def build() -> dict:
         },
         # 有効期限のない免状しか持っていない人（灰色に数えない例）。
         {
-            "id": "p-012", "name": "川畑 悠", "site": "姶良支店", "role": "電気工事",
+            "id": "p-012", "code": "E-0012", "kana": "かわばた ゆう", "name": "川畑 悠", "site": "姶良支店", "role": "電気工事",
             "holdings": [
                 ("req-den1-menjo", {}),
                 ("req-kenshin", {"records": [{"done_on": iso(TODAY - timedelta(days=100)),
@@ -205,6 +215,7 @@ def build() -> dict:
             {
                 "id": spec["id"], "name": spec["name"], "kind": "person",
                 "site": spec["site"], "role": spec["role"],
+                "code": spec.get("code", ""), "kana": spec.get("kana", ""),
             }
         )
         for requirement_id, kw in spec["holdings"]:

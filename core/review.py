@@ -27,6 +27,7 @@ from core.schedule import (
 
 __all__ = [
     "Row",
+    "STATUS_ORDER",
     "SubjectSummary",
     "build_rows",
     "summarize_by_subject",

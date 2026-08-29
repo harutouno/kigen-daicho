@@ -158,5 +158,55 @@
     "cycle_months": null,
     "source": "道路運送車両法。有効期間は車種・用途により異なる。",
     "note": "周期は車種や用途で変わるため計算しない。車検証に記載された満了日をそのまま登録する。"
+  },
+  {
+    "id": "req-awp-skill",
+    "name": "高所作業車運転技能講習",
+    "category": "qualification",
+    "obligation": "none",
+    "date_mode": "none",
+    "cycle_months": null,
+    "source": "労働安全衛生法（技能講習）。修了証に有効期限はない。",
+    "note": "作業床の高さ10m以上の高所作業車の運転に必要。修了証の期限は無いが、概ね5年ごとの再教育が努力義務として示されている。"
+  },
+  {
+    "id": "req-harness-edu",
+    "name": "フルハーネス型墜落制止用器具 特別教育",
+    "category": "qualification",
+    "obligation": "none",
+    "date_mode": "none",
+    "cycle_months": null,
+    "source": "労働安全衛生法（特別教育）。有効期限はない。",
+    "note": "高さ2m以上で作業床を設けられない箇所での使用に必要。"
+  },
+  {
+    "id": "req-lowvolt-edu",
+    "name": "低圧電気取扱業務 特別教育",
+    "category": "qualification",
+    "obligation": "none",
+    "date_mode": "none",
+    "cycle_months": null,
+    "source": "労働安全衛生法（特別教育）。有効期限はない。",
+    "note": "低圧の充電電路の敷設・修理等の業務に必要。"
+  },
+  {
+    "id": "req-highvolt-edu",
+    "name": "高圧・特別高圧電気取扱業務 特別教育",
+    "category": "qualification",
+    "obligation": "none",
+    "date_mode": "none",
+    "cycle_months": null,
+    "source": "労働安全衛生法（特別教育）。有効期限はない。",
+    "note": "高圧・特別高圧の充電電路の取扱業務に必要。"
+  },
+  {
+    "id": "req-shokucho-edu",
+    "name": "職長・安全衛生責任者教育",
+    "category": "qualification",
+    "obligation": "none",
+    "date_mode": "none",
+    "cycle_months": null,
+    "source": "労働安全衛生法（安全衛生教育）。修了に有効期限はない。",
+    "note": "期限があるのは別項目の『職長・安全衛生責任者 能力向上教育』の側（概ね5年ごと・努力義務）。二つは別物として登録する。"
   }
 ]

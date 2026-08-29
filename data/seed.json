@@ -162,6 +162,56 @@
       "cycle_months": null,
       "source": "道路運送車両法。有効期間は車種・用途により異なる。",
       "note": "周期は車種や用途で変わるため計算しない。車検証に記載された満了日をそのまま登録する。"
+    },
+    {
+      "id": "req-awp-skill",
+      "name": "高所作業車運転技能講習",
+      "category": "qualification",
+      "obligation": "none",
+      "date_mode": "none",
+      "cycle_months": null,
+      "source": "労働安全衛生法（技能講習）。修了証に有効期限はない。",
+      "note": "作業床の高さ10m以上の高所作業車の運転に必要。修了証の期限は無いが、概ね5年ごとの再教育が努力義務として示されている。"
+    },
+    {
+      "id": "req-harness-edu",
+      "name": "フルハーネス型墜落制止用器具 特別教育",
+      "category": "qualification",
+      "obligation": "none",
+      "date_mode": "none",
+      "cycle_months": null,
+      "source": "労働安全衛生法（特別教育）。有効期限はない。",
+      "note": "高さ2m以上で作業床を設けられない箇所での使用に必要。"
+    },
+    {
+      "id": "req-lowvolt-edu",
+      "name": "低圧電気取扱業務 特別教育",
+      "category": "qualification",
+      "obligation": "none",
+      "date_mode": "none",
+      "cycle_months": null,
+      "source": "労働安全衛生法（特別教育）。有効期限はない。",
+      "note": "低圧の充電電路の敷設・修理等の業務に必要。"
+    },
+    {
+      "id": "req-highvolt-edu",
+      "name": "高圧・特別高圧電気取扱業務 特別教育",
+      "category": "qualification",
+      "obligation": "none",
+      "date_mode": "none",
+      "cycle_months": null,
+      "source": "労働安全衛生法（特別教育）。有効期限はない。",
+      "note": "高圧・特別高圧の充電電路の取扱業務に必要。"
+    },
+    {
+      "id": "req-shokucho-edu",
+      "name": "職長・安全衛生責任者教育",
+      "category": "qualification",
+      "obligation": "none",
+      "date_mode": "none",
+      "cycle_months": null,
+      "source": "労働安全衛生法（安全衛生教育）。修了に有効期限はない。",
+      "note": "期限があるのは別項目の『職長・安全衛生責任者 能力向上教育』の側（概ね5年ごと・努力義務）。二つは別物として登録する。"
     }
   ],
   "subjects": [
@@ -170,532 +220,620 @@
       "name": "迫田 和樹",
       "kind": "person",
       "site": "鹿児島本社",
-      "role": "施工管理"
+      "role": "施工管理",
+      "code": "E-0001",
+      "kana": "さこだ かずき"
     },
     {
       "id": "p-002",
       "name": "田中 新一",
       "kind": "person",
       "site": "志布志支店",
-      "role": "施工管理"
+      "role": "施工管理",
+      "code": "E-0002",
+      "kana": "たなか しんいち"
     },
     {
       "id": "p-003",
       "name": "山口 正人",
       "kind": "person",
       "site": "川内支店",
-      "role": "電気工事"
+      "role": "電気工事",
+      "code": "E-0003",
+      "kana": "やまぐち まさと"
     },
     {
       "id": "p-004",
       "name": "東 亮",
       "kind": "person",
       "site": "鹿児島本社",
-      "role": "施工管理"
+      "role": "施工管理",
+      "code": "E-0004",
+      "kana": "ひがし りょう"
     },
     {
       "id": "p-005",
       "name": "中村 健一",
       "kind": "person",
       "site": "国分支店",
-      "role": "電気工事"
+      "role": "電気工事",
+      "code": "E-0005",
+      "kana": "なかむら けんいち"
     },
     {
       "id": "p-006",
       "name": "山下 太郎",
       "kind": "person",
       "site": "鹿児島本社",
-      "role": "施工管理"
+      "role": "施工管理",
+      "code": "E-0006",
+      "kana": "やました たろう"
     },
     {
       "id": "p-007",
       "name": "佐藤 龍也",
       "kind": "person",
       "site": "志布志支店",
-      "role": "電気工事"
+      "role": "電気工事",
+      "code": "E-0007",
+      "kana": "さとう たつや"
     },
     {
       "id": "p-008",
       "name": "松本 裕介",
       "kind": "person",
       "site": "川内支店",
-      "role": "施工管理"
+      "role": "施工管理",
+      "code": "E-0008",
+      "kana": "まつもと ゆうすけ"
     },
     {
       "id": "p-009",
       "name": "加藤 由美",
       "kind": "person",
       "site": "姶良支店",
-      "role": "事務"
+      "role": "事務",
+      "code": "E-0009",
+      "kana": "かとう ゆみ"
     },
     {
       "id": "p-010",
       "name": "今村 和也",
       "kind": "person",
       "site": "苓北支店",
-      "role": "電気工事"
+      "role": "電気工事",
+      "code": "E-0010",
+      "kana": "いまむら かずや"
     },
     {
       "id": "p-011",
       "name": "有村 千尋",
       "kind": "person",
       "site": "鹿児島本社",
-      "role": "保守・計装"
+      "role": "保守・計装",
+      "code": "E-0011",
+      "kana": "ありむら ちひろ"
     },
     {
       "id": "p-012",
       "name": "川畑 悠",
       "kind": "person",
       "site": "姶良支店",
-      "role": "電気工事"
+      "role": "電気工事",
+      "code": "E-0012",
+      "kana": "かわばた ゆう"
     },
     {
       "id": "p-013",
       "name": "上野 由美",
       "kind": "person",
       "site": "川内支店",
-      "role": "事務"
+      "role": "事務",
+      "code": "E-0013"
     },
     {
       "id": "p-014",
       "name": "内田 拓海",
       "kind": "person",
       "site": "国分支店",
-      "role": "保守・計装"
+      "role": "保守・計装",
+      "code": "E-0014"
     },
     {
       "id": "p-015",
       "name": "大久保 千尋",
       "kind": "person",
       "site": "志布志支店",
-      "role": "電気工事"
+      "role": "電気工事",
+      "code": "E-0015"
     },
     {
       "id": "p-016",
       "name": "串木野 和也",
       "kind": "person",
       "site": "姶良支店",
-      "role": "施工管理"
+      "role": "施工管理",
+      "code": "E-0016"
     },
     {
       "id": "p-017",
       "name": "郡山 沙織",
       "kind": "person",
       "site": "苓北支店",
-      "role": "事務"
+      "role": "事務",
+      "code": "E-0017"
     },
     {
       "id": "p-018",
       "name": "重信 新一",
       "kind": "person",
       "site": "鹿児島本社",
-      "role": "保守・計装"
+      "role": "保守・計装",
+      "code": "E-0018"
     },
     {
       "id": "p-019",
       "name": "白坂 誠",
       "kind": "person",
       "site": "川内支店",
-      "role": "電気工事"
+      "role": "電気工事",
+      "code": "E-0019"
     },
     {
       "id": "p-020",
       "name": "瀬戸口 直人",
       "kind": "person",
       "site": "国分支店",
-      "role": "施工管理"
+      "role": "施工管理",
+      "code": "E-0020"
     },
     {
       "id": "p-021",
       "name": "曽木 健一",
       "kind": "person",
       "site": "志布志支店",
-      "role": "事務"
+      "role": "事務",
+      "code": "E-0021"
     },
     {
       "id": "p-022",
       "name": "高崎 翔",
       "kind": "person",
       "site": "姶良支店",
-      "role": "保守・計装"
+      "role": "保守・計装",
+      "code": "E-0022"
     },
     {
       "id": "p-023",
       "name": "竹之内 和樹",
       "kind": "person",
       "site": "苓北支店",
-      "role": "電気工事"
+      "role": "電気工事",
+      "code": "E-0023"
     },
     {
       "id": "p-024",
       "name": "田代 太郎",
       "kind": "person",
       "site": "鹿児島本社",
-      "role": "施工管理"
+      "role": "施工管理",
+      "code": "E-0024"
     },
     {
       "id": "p-025",
       "name": "鶴田 陽子",
       "kind": "person",
       "site": "川内支店",
-      "role": "事務"
+      "role": "事務",
+      "code": "E-0025"
     },
     {
       "id": "p-026",
       "name": "徳永 亮",
       "kind": "person",
       "site": "国分支店",
-      "role": "保守・計装"
+      "role": "保守・計装",
+      "code": "E-0026"
     },
     {
       "id": "p-027",
       "name": "永田 龍也",
       "kind": "person",
       "site": "志布志支店",
-      "role": "電気工事"
+      "role": "電気工事",
+      "code": "E-0027"
     },
     {
       "id": "p-028",
       "name": "西田 健太",
       "kind": "person",
       "site": "姶良支店",
-      "role": "施工管理"
+      "role": "施工管理",
+      "code": "E-0028"
     },
     {
       "id": "p-029",
       "name": "野元 修司",
       "kind": "person",
       "site": "苓北支店",
-      "role": "事務"
+      "role": "事務",
+      "code": "E-0029"
     },
     {
       "id": "p-030",
       "name": "橋口 裕介",
       "kind": "person",
       "site": "鹿児島本社",
-      "role": "保守・計装"
+      "role": "保守・計装",
+      "code": "E-0030"
     },
     {
       "id": "p-031",
       "name": "浜田 麻衣",
       "kind": "person",
       "site": "川内支店",
-      "role": "電気工事"
+      "role": "電気工事",
+      "code": "E-0031"
     },
     {
       "id": "p-032",
       "name": "肥後 悠",
       "kind": "person",
       "site": "国分支店",
-      "role": "施工管理"
+      "role": "施工管理",
+      "code": "E-0032"
     },
     {
       "id": "p-033",
       "name": "福留 由美",
       "kind": "person",
       "site": "志布志支店",
-      "role": "事務"
+      "role": "事務",
+      "code": "E-0033"
     },
     {
       "id": "p-034",
       "name": "藤崎 拓海",
       "kind": "person",
       "site": "姶良支店",
-      "role": "保守・計装"
+      "role": "保守・計装",
+      "code": "E-0034"
     },
     {
       "id": "p-035",
       "name": "堀之内 千尋",
       "kind": "person",
       "site": "苓北支店",
-      "role": "電気工事"
+      "role": "電気工事",
+      "code": "E-0035"
     },
     {
       "id": "p-036",
       "name": "牧野 和也",
       "kind": "person",
       "site": "鹿児島本社",
-      "role": "施工管理"
+      "role": "施工管理",
+      "code": "E-0036"
     },
     {
       "id": "p-037",
       "name": "溝口 沙織",
       "kind": "person",
       "site": "川内支店",
-      "role": "事務"
+      "role": "事務",
+      "code": "E-0037"
     },
     {
       "id": "p-038",
       "name": "宮里 新一",
       "kind": "person",
       "site": "国分支店",
-      "role": "保守・計装"
+      "role": "保守・計装",
+      "code": "E-0038"
     },
     {
       "id": "p-039",
       "name": "村岡 誠",
       "kind": "person",
       "site": "志布志支店",
-      "role": "電気工事"
+      "role": "電気工事",
+      "code": "E-0039"
     },
     {
       "id": "p-040",
       "name": "山口 和樹",
       "kind": "person",
       "site": "姶良支店",
-      "role": "施工管理"
+      "role": "施工管理",
+      "code": "E-0040"
     },
     {
       "id": "p-041",
       "name": "迫田 太郎",
       "kind": "person",
       "site": "苓北支店",
-      "role": "事務"
+      "role": "事務",
+      "code": "E-0041"
     },
     {
       "id": "p-042",
       "name": "東 陽子",
       "kind": "person",
       "site": "鹿児島本社",
-      "role": "保守・計装"
+      "role": "保守・計装",
+      "code": "E-0042"
     },
     {
       "id": "p-043",
       "name": "前田 亮",
       "kind": "person",
       "site": "川内支店",
-      "role": "電気工事"
+      "role": "電気工事",
+      "code": "E-0043"
     },
     {
       "id": "p-044",
       "name": "川畑 龍也",
       "kind": "person",
       "site": "国分支店",
-      "role": "施工管理"
+      "role": "施工管理",
+      "code": "E-0044"
     },
     {
       "id": "p-045",
       "name": "有村 健太",
       "kind": "person",
       "site": "志布志支店",
-      "role": "事務"
+      "role": "事務",
+      "code": "E-0045"
     },
     {
       "id": "p-046",
       "name": "田中 修司",
       "kind": "person",
       "site": "姶良支店",
-      "role": "保守・計装"
+      "role": "保守・計装",
+      "code": "E-0046"
     },
     {
       "id": "p-047",
       "name": "中村 裕介",
       "kind": "person",
       "site": "苓北支店",
-      "role": "電気工事"
+      "role": "電気工事",
+      "code": "E-0047"
     },
     {
       "id": "p-048",
       "name": "山下 麻衣",
       "kind": "person",
       "site": "鹿児島本社",
-      "role": "施工管理"
+      "role": "施工管理",
+      "code": "E-0048"
     },
     {
       "id": "p-049",
       "name": "佐藤 悠",
       "kind": "person",
       "site": "川内支店",
-      "role": "事務"
+      "role": "事務",
+      "code": "E-0049"
     },
     {
       "id": "p-050",
       "name": "松本 由美",
       "kind": "person",
       "site": "国分支店",
-      "role": "保守・計装"
+      "role": "保守・計装",
+      "code": "E-0050"
     },
     {
       "id": "p-051",
       "name": "加藤 拓海",
       "kind": "person",
       "site": "志布志支店",
-      "role": "電気工事"
+      "role": "電気工事",
+      "code": "E-0051"
     },
     {
       "id": "p-052",
       "name": "今村 千尋",
       "kind": "person",
       "site": "姶良支店",
-      "role": "施工管理"
+      "role": "施工管理",
+      "code": "E-0052"
     },
     {
       "id": "p-053",
       "name": "上野 和也",
       "kind": "person",
       "site": "苓北支店",
-      "role": "事務"
+      "role": "事務",
+      "code": "E-0053"
     },
     {
       "id": "p-054",
       "name": "内田 沙織",
       "kind": "person",
       "site": "鹿児島本社",
-      "role": "保守・計装"
+      "role": "保守・計装",
+      "code": "E-0054"
     },
     {
       "id": "p-055",
       "name": "大久保 新一",
       "kind": "person",
       "site": "川内支店",
-      "role": "電気工事"
+      "role": "電気工事",
+      "code": "E-0055"
     },
     {
       "id": "p-056",
       "name": "串木野 誠",
       "kind": "person",
       "site": "国分支店",
-      "role": "施工管理"
+      "role": "施工管理",
+      "code": "E-0056"
     },
     {
       "id": "p-057",
       "name": "郡山 直人",
       "kind": "person",
       "site": "志布志支店",
-      "role": "事務"
+      "role": "事務",
+      "code": "E-0057"
     },
     {
       "id": "p-058",
       "name": "重信 健一",
       "kind": "person",
       "site": "姶良支店",
-      "role": "保守・計装"
+      "role": "保守・計装",
+      "code": "E-0058"
     },
     {
       "id": "p-059",
       "name": "白坂 翔",
       "kind": "person",
       "site": "苓北支店",
-      "role": "電気工事"
+      "role": "電気工事",
+      "code": "E-0059"
     },
     {
       "id": "p-060",
       "name": "瀬戸口 和樹",
       "kind": "person",
       "site": "鹿児島本社",
-      "role": "施工管理"
+      "role": "施工管理",
+      "code": "E-0060"
     },
     {
       "id": "p-061",
       "name": "曽木 太郎",
       "kind": "person",
       "site": "川内支店",
-      "role": "事務"
+      "role": "事務",
+      "code": "E-0061"
     },
     {
       "id": "p-062",
       "name": "高崎 陽子",
       "kind": "person",
       "site": "国分支店",
-      "role": "保守・計装"
+      "role": "保守・計装",
+      "code": "E-0062"
     },
     {
       "id": "p-063",
       "name": "竹之内 亮",
       "kind": "person",
       "site": "志布志支店",
-      "role": "電気工事"
+      "role": "電気工事",
+      "code": "E-0063"
     },
     {
       "id": "p-064",
       "name": "田代 龍也",
       "kind": "person",
       "site": "姶良支店",
-      "role": "施工管理"
+      "role": "施工管理",
+      "code": "E-0064"
     },
     {
       "id": "p-065",
       "name": "鶴田 健太",
       "kind": "person",
       "site": "苓北支店",
-      "role": "事務"
+      "role": "事務",
+      "code": "E-0065"
     },
     {
       "id": "p-066",
       "name": "徳永 修司",
       "kind": "person",
       "site": "鹿児島本社",
-      "role": "保守・計装"
+      "role": "保守・計装",
+      "code": "E-0066"
     },
     {
       "id": "p-067",
       "name": "永田 裕介",
       "kind": "person",
       "site": "川内支店",
-      "role": "電気工事"
+      "role": "電気工事",
+      "code": "E-0067"
     },
     {
       "id": "p-068",
       "name": "西田 麻衣",
       "kind": "person",
       "site": "国分支店",
-      "role": "施工管理"
+      "role": "施工管理",
+      "code": "E-0068"
     },
     {
       "id": "p-069",
       "name": "野元 悠",
       "kind": "person",
       "site": "志布志支店",
-      "role": "事務"
+      "role": "事務",
+      "code": "E-0069"
     },
     {
       "id": "p-070",
       "name": "橋口 由美",
       "kind": "person",
       "site": "姶良支店",
-      "role": "保守・計装"
+      "role": "保守・計装",
+      "code": "E-0070"
     },
     {
       "id": "p-071",
       "name": "浜田 拓海",
       "kind": "person",
       "site": "苓北支店",
-      "role": "電気工事"
+      "role": "電気工事",
+      "code": "E-0071"
     },
     {
       "id": "p-072",
       "name": "肥後 千尋",
       "kind": "person",
       "site": "鹿児島本社",
-      "role": "施工管理"
+      "role": "施工管理",
+      "code": "E-0072"
     },
     {
       "id": "p-073",
       "name": "福留 和也",
       "kind": "person",
       "site": "川内支店",
-      "role": "事務"
+      "role": "事務",
+      "code": "E-0073"
     },
     {
       "id": "p-074",
       "name": "藤崎 沙織",
       "kind": "person",
       "site": "国分支店",
-      "role": "保守・計装"
+      "role": "保守・計装",
+      "code": "E-0074"
     },
     {
       "id": "p-075",
       "name": "堀之内 新一",
       "kind": "person",
       "site": "志布志支店",
-      "role": "電気工事"
+      "role": "電気工事",
+      "code": "E-0075"
     },
     {
       "id": "p-076",
       "name": "牧野 誠",
       "kind": "person",
       "site": "姶良支店",
-      "role": "施工管理"
+      "role": "施工管理",
+      "code": "E-0076"
     },
     {
       "id": "a-GLO-001",
@@ -1029,7 +1167,8 @@
       "requirement_id": "req-kanri-cert",
       "fixed_due_on": "2027-03-31",
       "records": [],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
       "id": "h-0002",
@@ -1037,7 +1176,8 @@
       "requirement_id": "req-kanri-course",
       "fixed_due_on": "2026-07-31",
       "records": [],
-      "note": "資格者証は有効だが講習が切れている。"
+      "note": "資格者証は有効だが講習が切れている。受講を予約済み。",
+      "planned_on": "2026-09-19"
     },
     {
       "id": "h-0003",
@@ -1051,10 +1191,65 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
       "id": "h-0004",
+      "subject_id": "p-001",
+      "requirement_id": "req-den1-menjo",
+      "fixed_due_on": null,
+      "records": [],
+      "note": "",
+      "planned_on": null
+    },
+    {
+      "id": "h-0005",
+      "subject_id": "p-001",
+      "requirement_id": "req-awp-skill",
+      "fixed_due_on": null,
+      "records": [],
+      "note": "",
+      "planned_on": null
+    },
+    {
+      "id": "h-0006",
+      "subject_id": "p-001",
+      "requirement_id": "req-harness-edu",
+      "fixed_due_on": null,
+      "records": [],
+      "note": "",
+      "planned_on": null
+    },
+    {
+      "id": "h-0007",
+      "subject_id": "p-001",
+      "requirement_id": "req-lowvolt-edu",
+      "fixed_due_on": null,
+      "records": [],
+      "note": "",
+      "planned_on": null
+    },
+    {
+      "id": "h-0008",
+      "subject_id": "p-001",
+      "requirement_id": "req-highvolt-edu",
+      "fixed_due_on": null,
+      "records": [],
+      "note": "",
+      "planned_on": null
+    },
+    {
+      "id": "h-0009",
+      "subject_id": "p-001",
+      "requirement_id": "req-shokucho-edu",
+      "fixed_due_on": null,
+      "records": [],
+      "note": "",
+      "planned_on": null
+    },
+    {
+      "id": "h-0010",
       "subject_id": "p-002",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1065,10 +1260,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0005",
+      "id": "h-0011",
       "subject_id": "p-003",
       "requirement_id": "req-den1-course",
       "fixed_due_on": null,
@@ -1079,18 +1275,20 @@
           "memo": "定期講習"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0006",
+      "id": "h-0012",
       "subject_id": "p-003",
       "requirement_id": "req-den1-menjo",
       "fixed_due_on": null,
       "records": [],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0007",
+      "id": "h-0013",
       "subject_id": "p-003",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1101,26 +1299,29 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0008",
+      "id": "h-0014",
       "subject_id": "p-004",
       "requirement_id": "req-den1-course",
       "fixed_due_on": null,
       "records": [],
-      "note": "免状は保有しているが前回の受講日が台帳に無い。"
+      "note": "免状は保有しているが前回の受講日が台帳に無い。",
+      "planned_on": null
     },
     {
-      "id": "h-0009",
+      "id": "h-0015",
       "subject_id": "p-004",
       "requirement_id": "req-den1-menjo",
       "fixed_due_on": null,
       "records": [],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0010",
+      "id": "h-0016",
       "subject_id": "p-004",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1131,18 +1332,20 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0011",
+      "id": "h-0017",
       "subject_id": "p-005",
       "requirement_id": "req-kikenbutsu-course",
       "fixed_due_on": null,
       "records": [],
-      "note": "従事開始時の受講日が不明。"
+      "note": "従事開始時の受講日が不明。",
+      "planned_on": null
     },
     {
-      "id": "h-0012",
+      "id": "h-0018",
       "subject_id": "p-005",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1153,10 +1356,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0013",
+      "id": "h-0019",
       "subject_id": "p-006",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1167,10 +1371,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0014",
+      "id": "h-0020",
       "subject_id": "p-007",
       "requirement_id": "req-den1-course",
       "fixed_due_on": null,
@@ -1181,18 +1386,20 @@
           "memo": "定期講習"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0015",
+      "id": "h-0021",
       "subject_id": "p-007",
       "requirement_id": "req-den1-menjo",
       "fixed_due_on": null,
       "records": [],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0016",
+      "id": "h-0022",
       "subject_id": "p-008",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1203,18 +1410,20 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0017",
+      "id": "h-0023",
       "subject_id": "p-008",
       "requirement_id": "req-driver-license",
       "fixed_due_on": "2026-10-20",
       "records": [],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0018",
+      "id": "h-0024",
       "subject_id": "p-009",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1225,10 +1434,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0019",
+      "id": "h-0025",
       "subject_id": "p-010",
       "requirement_id": "req-kikenbutsu-course",
       "fixed_due_on": null,
@@ -1239,10 +1449,11 @@
           "memo": "保安講習"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0020",
+      "id": "h-0026",
       "subject_id": "p-010",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1253,34 +1464,38 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0021",
+      "id": "h-0027",
       "subject_id": "p-011",
       "requirement_id": "req-kanri-cert",
       "fixed_due_on": "2029-11-30",
       "records": [],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0022",
+      "id": "h-0028",
       "subject_id": "p-011",
       "requirement_id": "req-kanri-course",
       "fixed_due_on": "2029-12-31",
       "records": [],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0023",
+      "id": "h-0029",
       "subject_id": "p-011",
       "requirement_id": "req-shunin-menjo",
       "fixed_due_on": null,
       "records": [],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0024",
+      "id": "h-0030",
       "subject_id": "p-011",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1291,18 +1506,20 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0025",
+      "id": "h-0031",
       "subject_id": "p-012",
       "requirement_id": "req-den1-menjo",
       "fixed_due_on": null,
       "records": [],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0026",
+      "id": "h-0032",
       "subject_id": "p-012",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1313,10 +1530,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0027",
+      "id": "h-0033",
       "subject_id": "p-013",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1327,10 +1545,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0028",
+      "id": "h-0034",
       "subject_id": "p-014",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1341,10 +1560,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0029",
+      "id": "h-0035",
       "subject_id": "p-015",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1355,10 +1575,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0030",
+      "id": "h-0036",
       "subject_id": "p-016",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1369,10 +1590,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0031",
+      "id": "h-0037",
       "subject_id": "p-017",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1383,10 +1605,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0032",
+      "id": "h-0038",
       "subject_id": "p-018",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1397,10 +1620,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0033",
+      "id": "h-0039",
       "subject_id": "p-019",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1411,10 +1635,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0034",
+      "id": "h-0040",
       "subject_id": "p-020",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1425,10 +1650,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0035",
+      "id": "h-0041",
       "subject_id": "p-021",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1439,10 +1665,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0036",
+      "id": "h-0042",
       "subject_id": "p-022",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1453,10 +1680,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0037",
+      "id": "h-0043",
       "subject_id": "p-023",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1467,10 +1695,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0038",
+      "id": "h-0044",
       "subject_id": "p-024",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1481,10 +1710,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0039",
+      "id": "h-0045",
       "subject_id": "p-025",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1495,10 +1725,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0040",
+      "id": "h-0046",
       "subject_id": "p-026",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1509,10 +1740,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0041",
+      "id": "h-0047",
       "subject_id": "p-027",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1523,10 +1755,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0042",
+      "id": "h-0048",
       "subject_id": "p-028",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1537,10 +1770,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0043",
+      "id": "h-0049",
       "subject_id": "p-029",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1551,10 +1785,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0044",
+      "id": "h-0050",
       "subject_id": "p-030",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1565,10 +1800,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0045",
+      "id": "h-0051",
       "subject_id": "p-031",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1579,10 +1815,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0046",
+      "id": "h-0052",
       "subject_id": "p-032",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1593,10 +1830,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0047",
+      "id": "h-0053",
       "subject_id": "p-033",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1607,10 +1845,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0048",
+      "id": "h-0054",
       "subject_id": "p-034",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1621,10 +1860,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0049",
+      "id": "h-0055",
       "subject_id": "p-035",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1635,10 +1875,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0050",
+      "id": "h-0056",
       "subject_id": "p-036",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1649,10 +1890,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0051",
+      "id": "h-0057",
       "subject_id": "p-037",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1663,10 +1905,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0052",
+      "id": "h-0058",
       "subject_id": "p-038",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1677,10 +1920,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0053",
+      "id": "h-0059",
       "subject_id": "p-039",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1691,10 +1935,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0054",
+      "id": "h-0060",
       "subject_id": "p-040",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1705,10 +1950,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0055",
+      "id": "h-0061",
       "subject_id": "p-041",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1719,10 +1965,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0056",
+      "id": "h-0062",
       "subject_id": "p-042",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1733,10 +1980,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0057",
+      "id": "h-0063",
       "subject_id": "p-043",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1747,10 +1995,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0058",
+      "id": "h-0064",
       "subject_id": "p-044",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1761,10 +2010,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0059",
+      "id": "h-0065",
       "subject_id": "p-045",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1775,10 +2025,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0060",
+      "id": "h-0066",
       "subject_id": "p-046",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1789,10 +2040,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0061",
+      "id": "h-0067",
       "subject_id": "p-047",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1803,10 +2055,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0062",
+      "id": "h-0068",
       "subject_id": "p-048",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1817,10 +2070,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0063",
+      "id": "h-0069",
       "subject_id": "p-049",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1831,10 +2085,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0064",
+      "id": "h-0070",
       "subject_id": "p-050",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1845,10 +2100,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0065",
+      "id": "h-0071",
       "subject_id": "p-051",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1859,10 +2115,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0066",
+      "id": "h-0072",
       "subject_id": "p-052",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1873,10 +2130,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0067",
+      "id": "h-0073",
       "subject_id": "p-053",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1887,10 +2145,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0068",
+      "id": "h-0074",
       "subject_id": "p-054",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1901,10 +2160,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0069",
+      "id": "h-0075",
       "subject_id": "p-055",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1915,10 +2175,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0070",
+      "id": "h-0076",
       "subject_id": "p-056",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1929,10 +2190,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0071",
+      "id": "h-0077",
       "subject_id": "p-057",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1943,10 +2205,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0072",
+      "id": "h-0078",
       "subject_id": "p-058",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1957,10 +2220,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0073",
+      "id": "h-0079",
       "subject_id": "p-059",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1971,10 +2235,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0074",
+      "id": "h-0080",
       "subject_id": "p-060",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1985,10 +2250,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0075",
+      "id": "h-0081",
       "subject_id": "p-061",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -1999,10 +2265,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0076",
+      "id": "h-0082",
       "subject_id": "p-062",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -2013,10 +2280,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0077",
+      "id": "h-0083",
       "subject_id": "p-063",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -2027,10 +2295,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0078",
+      "id": "h-0084",
       "subject_id": "p-064",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -2041,10 +2310,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0079",
+      "id": "h-0085",
       "subject_id": "p-065",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -2055,10 +2325,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0080",
+      "id": "h-0086",
       "subject_id": "p-066",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -2069,10 +2340,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0081",
+      "id": "h-0087",
       "subject_id": "p-067",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -2083,10 +2355,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0082",
+      "id": "h-0088",
       "subject_id": "p-068",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -2097,10 +2370,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0083",
+      "id": "h-0089",
       "subject_id": "p-069",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -2111,10 +2385,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0084",
+      "id": "h-0090",
       "subject_id": "p-070",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -2125,10 +2400,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0085",
+      "id": "h-0091",
       "subject_id": "p-071",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -2139,10 +2415,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0086",
+      "id": "h-0092",
       "subject_id": "p-072",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -2153,10 +2430,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0087",
+      "id": "h-0093",
       "subject_id": "p-073",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -2167,10 +2445,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0088",
+      "id": "h-0094",
       "subject_id": "p-074",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -2181,10 +2460,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0089",
+      "id": "h-0095",
       "subject_id": "p-075",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -2195,10 +2475,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0090",
+      "id": "h-0096",
       "subject_id": "p-076",
       "requirement_id": "req-kenshin",
       "fixed_due_on": null,
@@ -2209,10 +2490,11 @@
           "memo": "定期健診"
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0091",
+      "id": "h-0097",
       "subject_id": "a-GLO-001",
       "requirement_id": "req-insulator-check",
       "fixed_due_on": null,
@@ -2223,18 +2505,20 @@
           "memo": ""
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0092",
+      "id": "h-0098",
       "subject_id": "a-GLO-002",
       "requirement_id": "req-insulator-check",
       "fixed_due_on": null,
       "records": [],
-      "note": "前回の点検日が台帳に無い。"
+      "note": "前回の点検日が台帳に無い。",
+      "planned_on": null
     },
     {
-      "id": "h-0093",
+      "id": "h-0099",
       "subject_id": "a-GLO-003",
       "requirement_id": "req-insulator-check",
       "fixed_due_on": null,
@@ -2245,10 +2529,11 @@
           "memo": ""
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0094",
+      "id": "h-0100",
       "subject_id": "a-GLO-004",
       "requirement_id": "req-insulator-check",
       "fixed_due_on": null,
@@ -2259,10 +2544,11 @@
           "memo": ""
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0095",
+      "id": "h-0101",
       "subject_id": "a-GLO-005",
       "requirement_id": "req-insulator-check",
       "fixed_due_on": null,
@@ -2273,10 +2559,11 @@
           "memo": ""
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0096",
+      "id": "h-0102",
       "subject_id": "a-GLO-006",
       "requirement_id": "req-insulator-check",
       "fixed_due_on": null,
@@ -2287,10 +2574,11 @@
           "memo": ""
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0097",
+      "id": "h-0103",
       "subject_id": "a-BOO-001",
       "requirement_id": "req-insulator-check",
       "fixed_due_on": null,
@@ -2301,10 +2589,11 @@
           "memo": ""
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0098",
+      "id": "h-0104",
       "subject_id": "a-BOO-002",
       "requirement_id": "req-insulator-check",
       "fixed_due_on": null,
@@ -2315,10 +2604,11 @@
           "memo": ""
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0099",
+      "id": "h-0105",
       "subject_id": "a-BOO-003",
       "requirement_id": "req-insulator-check",
       "fixed_due_on": null,
@@ -2329,10 +2619,11 @@
           "memo": ""
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0100",
+      "id": "h-0106",
       "subject_id": "a-BOO-004",
       "requirement_id": "req-insulator-check",
       "fixed_due_on": null,
@@ -2343,18 +2634,20 @@
           "memo": ""
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0101",
+      "id": "h-0107",
       "subject_id": "a-SHT-001",
       "requirement_id": "req-insulator-check",
       "fixed_due_on": null,
       "records": [],
-      "note": "前回の点検日が台帳に無い。"
+      "note": "前回の点検日が台帳に無い。",
+      "planned_on": null
     },
     {
-      "id": "h-0102",
+      "id": "h-0108",
       "subject_id": "a-SHT-002",
       "requirement_id": "req-insulator-check",
       "fixed_due_on": null,
@@ -2365,10 +2658,11 @@
           "memo": ""
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0103",
+      "id": "h-0109",
       "subject_id": "a-SHT-003",
       "requirement_id": "req-insulator-check",
       "fixed_due_on": null,
@@ -2379,10 +2673,11 @@
           "memo": ""
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0104",
+      "id": "h-0110",
       "subject_id": "a-SHT-004",
       "requirement_id": "req-insulator-check",
       "fixed_due_on": null,
@@ -2393,10 +2688,11 @@
           "memo": ""
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0105",
+      "id": "h-0111",
       "subject_id": "a-AWP-01",
       "requirement_id": "req-specific-inspection",
       "fixed_due_on": null,
@@ -2407,10 +2703,11 @@
           "memo": ""
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0106",
+      "id": "h-0112",
       "subject_id": "a-AWP-02",
       "requirement_id": "req-specific-inspection",
       "fixed_due_on": null,
@@ -2421,10 +2718,11 @@
           "memo": ""
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0107",
+      "id": "h-0113",
       "subject_id": "a-INS-001",
       "requirement_id": "req-instrument-cal",
       "fixed_due_on": null,
@@ -2435,10 +2733,11 @@
           "memo": ""
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0108",
+      "id": "h-0114",
       "subject_id": "a-INS-002",
       "requirement_id": "req-instrument-cal",
       "fixed_due_on": null,
@@ -2449,10 +2748,11 @@
           "memo": ""
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0109",
+      "id": "h-0115",
       "subject_id": "a-INS-003",
       "requirement_id": "req-instrument-cal",
       "fixed_due_on": null,
@@ -2463,10 +2763,11 @@
           "memo": ""
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0110",
+      "id": "h-0116",
       "subject_id": "a-ERT-001",
       "requirement_id": "req-instrument-cal",
       "fixed_due_on": null,
@@ -2477,10 +2778,11 @@
           "memo": ""
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0111",
+      "id": "h-0117",
       "subject_id": "a-ERT-002",
       "requirement_id": "req-instrument-cal",
       "fixed_due_on": null,
@@ -2491,10 +2793,11 @@
           "memo": ""
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0112",
+      "id": "h-0118",
       "subject_id": "a-CLA-001",
       "requirement_id": "req-instrument-cal",
       "fixed_due_on": null,
@@ -2505,10 +2808,11 @@
           "memo": ""
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0113",
+      "id": "h-0119",
       "subject_id": "a-CLA-002",
       "requirement_id": "req-instrument-cal",
       "fixed_due_on": null,
@@ -2519,10 +2823,11 @@
           "memo": ""
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0114",
+      "id": "h-0120",
       "subject_id": "a-DMM-001",
       "requirement_id": "req-instrument-cal",
       "fixed_due_on": null,
@@ -2533,10 +2838,11 @@
           "memo": ""
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0115",
+      "id": "h-0121",
       "subject_id": "a-DMM-002",
       "requirement_id": "req-instrument-cal",
       "fixed_due_on": null,
@@ -2547,18 +2853,20 @@
           "memo": ""
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0116",
+      "id": "h-0122",
       "subject_id": "a-VOL-001",
       "requirement_id": "req-instrument-cal",
       "fixed_due_on": null,
       "records": [],
-      "note": "前回の点検日が台帳に無い。"
+      "note": "前回の点検日が台帳に無い。",
+      "planned_on": null
     },
     {
-      "id": "h-0117",
+      "id": "h-0123",
       "subject_id": "a-VOL-002",
       "requirement_id": "req-instrument-cal",
       "fixed_due_on": null,
@@ -2569,10 +2877,11 @@
           "memo": ""
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0118",
+      "id": "h-0124",
       "subject_id": "a-LD-001",
       "requirement_id": "req-instrument-cal",
       "fixed_due_on": null,
@@ -2583,71 +2892,80 @@
           "memo": ""
         }
       ],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0119",
+      "id": "h-0125",
       "subject_id": "a-CAR-001",
       "requirement_id": "req-vehicle-inspection",
       "fixed_due_on": "2026-08-11",
       "records": [],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0120",
+      "id": "h-0126",
       "subject_id": "a-CAR-002",
       "requirement_id": "req-vehicle-inspection",
       "fixed_due_on": "2026-09-22",
       "records": [],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0121",
+      "id": "h-0127",
       "subject_id": "a-CAR-003",
       "requirement_id": "req-vehicle-inspection",
       "fixed_due_on": "2026-11-14",
       "records": [],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0122",
+      "id": "h-0128",
       "subject_id": "a-CAR-004",
       "requirement_id": "req-vehicle-inspection",
       "fixed_due_on": "2027-01-08",
       "records": [],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0123",
+      "id": "h-0129",
       "subject_id": "a-CAR-005",
       "requirement_id": "req-vehicle-inspection",
       "fixed_due_on": "2027-03-15",
       "records": [],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0124",
+      "id": "h-0130",
       "subject_id": "a-CAR-006",
       "requirement_id": "req-vehicle-inspection",
       "fixed_due_on": "2027-05-01",
       "records": [],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0125",
+      "id": "h-0131",
       "subject_id": "a-CAR-007",
       "requirement_id": "req-vehicle-inspection",
       "fixed_due_on": "2027-06-14",
       "records": [],
-      "note": ""
+      "note": "",
+      "planned_on": null
     },
     {
-      "id": "h-0126",
+      "id": "h-0132",
       "subject_id": "a-CAR-008",
       "requirement_id": "req-vehicle-inspection",
       "fixed_due_on": "2027-07-26",
       "records": [],
-      "note": ""
+      "note": "",
+      "planned_on": null
     }
   ]
 }
