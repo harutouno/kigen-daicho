@@ -38,7 +38,10 @@ from core.review import (
 from core.schedule import ScheduleError, add_months, validate_done_on
 from core.store import SEED_PATH, load_ledger
 
+import ui
+
 st.set_page_config(page_title="期限台帳", page_icon="📋", layout="wide")
+ui.inject()
 
 CARDS_PER_ROW = 3
 
@@ -47,19 +50,19 @@ PAGE_ASSETS = "道具・機器の点検"
 PAGE_SUBMISSION = "安全書類の提出前チェック"
 PAGE_TYPES = "種類の設定"
 
-SECTIONS: list[tuple[str, str, str, str]] = [
-    ("overdue", "🔴", "期限切れ", "期限を過ぎています"),
-    ("unknown", "⚪", "日付未入力・期限計算不可", "前回日が未入力で計算できません"),
-    ("due_soon", "🟠", "期限間近（30日以内）", "30日以内に期限が来ます"),
+SECTIONS: list[tuple[str, str, str]] = [
+    ("overdue", "期限切れ", "期限を過ぎています"),
+    ("unknown", "日付未入力・期限計算不可", "前回日が未入力で計算できません"),
+    ("due_soon", "期限間近（30日以内）", "30日以内に期限が来ます"),
 ]
-SECTION_BY_STATUS = {key: (mark, label, note) for key, mark, label, note in SECTIONS}
 
-STATUS_TEXT: dict[str, str] = {
-    "overdue": "🔴 期限切れ",
-    "unknown": "⚪ 日付未入力",
-    "due_soon": "🟠 期限間近",
-    "upcoming": "🟢 問題なし",
-    "ok": "🟢 問題なし",
+# 「予告」は 3 色に畳んだので、問題なしとして扱う。
+PILL_STATE: dict[str, str] = {
+    "overdue": "overdue",
+    "unknown": "unknown",
+    "due_soon": "due_soon",
+    "upcoming": "ok",
+    "ok": "ok",
 }
 
 NOT_BUILT = "この機能はまだ作っていません"
@@ -154,7 +157,9 @@ def draw_card(summary: SubjectSummary, slot) -> None:
     is_asset = subject.kind == "asset"
 
     # 見出しには「期限間近（30日以内）」と出すが、カードの中は幅が狭いので短い方を使う。
-    with slot.container(border=True):
+    # キーを付けると st-key-... の class が振られ、状態ごとの色帯を当てられる。
+    with slot.container(border=True, key=f"card-{PILL_STATE[summary.worst]}-{subject.id}"):
+        st.markdown(ui.bar(PILL_STATE[summary.worst]), unsafe_allow_html=True)
         st.markdown(f"##### {subject.name}")
         if is_asset:
             # 道具は名前では特定できない。「絶縁手袋」は何組もあるため、
@@ -164,7 +169,8 @@ def draw_card(summary: SubjectSummary, slot) -> None:
                 st.caption(f"型番：{subject.model}")
         else:
             st.caption(f"{subject.site} ／ {subject.role}")
-        st.markdown(f"**{STATUS_TEXT[summary.worst]}**")
+        st.markdown(ui.pill(PILL_STATE[summary.worst], short=True),
+                    unsafe_allow_html=True)
 
         cause = summary.cause
         if cause is None:
@@ -204,8 +210,8 @@ def state_label(row: Row) -> str:
     そもそも期限が無い。混ぜると、本当に日付が入っていない行が埋もれる。
     """
     if not row.requirement.has_deadline:
-        return "🔵 有効（期限なし）"
-    return STATUS_TEXT[row.status]
+        return ui.pill("none", short=True)
+    return ui.pill(PILL_STATE[row.status], short=True)
 
 
 def deadline_text(row: Row) -> str:
@@ -257,12 +263,13 @@ def count_states(rows: list[Row]) -> dict[str, int]:
     return counts
 
 
+# (count_states のキー, ui.STATE_STYLE のキー, 説明)
 DETAIL_TILES = [
-    ("overdue", "🔴 期限切れ", "すぐに対応が必要です"),
-    ("unknown", "⚪ 日付未入力・期限計算不可", "日付の入力が必要です"),
-    ("due_soon", "🟠 期限間近（30日以内）", "期限が近づいています"),
-    ("ok", "🟢 問題なし", "期限内です"),
-    ("no_deadline", "🔵 有効（期限なし）", "有効期限の定めなし"),
+    ("overdue", "overdue", "すぐに対応が必要です"),
+    ("unknown", "unknown", "日付の入力が必要です"),
+    ("due_soon", "due_soon", "期限が近づいています"),
+    ("ok", "ok", "期限内です"),
+    ("no_deadline", "none", "有効期限の定めなし"),
 ]
 
 
@@ -313,11 +320,10 @@ def draw_detail(kind: str) -> None:
     with status:
         st.markdown("**この人の状況**" if not is_asset else "**この道具の状況**")
         tiles = st.columns(len(DETAIL_TILES))
-        for (key, label, note), slot in zip(DETAIL_TILES, tiles):
-            with slot.container(border=True):
-                st.markdown(f"{label}")
-                st.markdown(f"### {counts[key]}件")
-                st.caption(note)
+        for (key, style, note), slot in zip(DETAIL_TILES, tiles):
+            slot.markdown(
+                ui.tile(style, counts[key], note, "件"), unsafe_allow_html=True
+            )
 
     # 最優先の 1 件。一覧のカードに出しているものと同じ行を、詳細でも先頭に出す。
     urgent = [r for r in rows if r.blocks_assignment or r.status == "due_soon"]
@@ -326,7 +332,8 @@ def draw_detail(kind: str) -> None:
         st.markdown("##### 最も優先して対応が必要なもの")
         with st.container(border=True):
             c1, c2, c3, c4 = st.columns([2, 2, 1.5, 1.5])
-            c1.markdown(f"{state_label(top)}\n\n**{top.requirement.name}**")
+            c1.markdown(state_label(top), unsafe_allow_html=True)
+            c1.markdown(f"**{top.requirement.name}**")
             c2.write(deadline_text(top))
             c3.write(situation_text(top))
             c4.write(
@@ -375,7 +382,7 @@ def draw_detail(kind: str) -> None:
             st.session_state.pop("recording", None)
             st.session_state.pop("adding", None)
             st.rerun()
-        cols[2].write(state_label(row))
+        cols[2].markdown(state_label(row), unsafe_allow_html=True)
         cols[3].write(deadline_text(row))
         cols[4].write(situation_text(row))
 
@@ -491,7 +498,8 @@ def draw_holding_detail(kind: str) -> None:
     if _flash:
         st.success(_flash, icon="✅")
 
-    st.markdown(f"## {req.name}　{state_label(row)}")
+    st.markdown(f"## {req.name}")
+    st.markdown(state_label(row), unsafe_allow_html=True)
     st.caption(f"{subject.name}（{subject.code}）　{subject.site} ／ {subject.role}")
 
     left, right = st.columns([3, 2])
@@ -528,7 +536,7 @@ def draw_holding_detail(kind: str) -> None:
     with right:
         with st.container(border=True):
             st.markdown("**現在の状態**")
-            st.markdown(f"### {state_label(row)}")
+            st.markdown(state_label(row), unsafe_allow_html=True)
             st.write(situation_text(row))
             if row.blocks_assignment:
                 st.error(
@@ -782,7 +790,7 @@ def page_people() -> None:
 
     summaries = summarize_by_subject(lg, today, kind="person")
 
-    by_status: dict[str, list[SubjectSummary]] = {key: [] for key, _, _, _ in SECTIONS}
+    by_status: dict[str, list[SubjectSummary]] = {key: [] for key, _, _ in SECTIONS}
     clear: list[SubjectSummary] = []
     for s in summaries:
         if s.worst in by_status:
@@ -800,15 +808,13 @@ def page_people() -> None:
     )
 
     tiles = st.columns(4)
-    for (key, mark, label, note), slot in zip(SECTIONS, tiles):
-        with slot.container(border=True):
-            st.markdown(f"{mark} **{label}**")
-            st.markdown(f"# {len(by_status[key])}人")
-            st.caption(note)
-    with tiles[3].container(border=True):
-        st.markdown("🟢 **問題なし**")
-        st.markdown(f"# {len(clear)}人")
-        st.caption("期限切れ・期限間近はありません")
+    for (key, label, note), slot in zip(SECTIONS, tiles):
+        slot.markdown(ui.tile(key, len(by_status[key]), note, "人"),
+                      unsafe_allow_html=True)
+    tiles[3].markdown(
+        ui.tile("ok", len(clear), "期限切れ・期限間近はありません", "人"),
+        unsafe_allow_html=True,
+    )
 
     left, right = st.columns([1, 1])
 
@@ -844,7 +850,7 @@ def page_people() -> None:
             or keyword in s.subject.name.replace(" ", "")
             or keyword in s.subject.site
         ]
-        st.markdown(f"##### 🔍 「{keyword}」の検索結果　{len(hits)}人")
+        st.markdown(ui.section(f"「{keyword}」の検索結果", len(hits), "人"), unsafe_allow_html=True)
         if hits:
             st.caption("表示範囲の設定に関係なく、全員から探しています。")
             draw_grid(hits)
@@ -855,17 +861,17 @@ def page_people() -> None:
         shown_clear = st.session_state.get("scope") == "全員"
 
         any_shown = False
-        for key, mark, label, _ in SECTIONS:
+        for key, label, _ in SECTIONS:
             items = by_status[key]
             if not items:
                 continue
             any_shown = True
-            st.markdown(f"##### {mark} {label}　{len(items)}人")
+            st.markdown(ui.section(label, len(items), "人"), unsafe_allow_html=True)
             draw_grid(items)
 
         if shown_clear and clear:
             any_shown = True
-            st.markdown(f"##### 🟢 問題なし　{len(clear)}人")
+            st.markdown(ui.section("問題なし", len(clear), "人"), unsafe_allow_html=True)
             draw_grid(clear)
 
         if not any_shown:
@@ -895,7 +901,7 @@ def page_assets() -> None:
 
     summaries = summarize_by_subject(lg, today, kind="asset")
 
-    by_status: dict[str, list[SubjectSummary]] = {key: [] for key, _, _, _ in SECTIONS}
+    by_status: dict[str, list[SubjectSummary]] = {key: [] for key, _, _ in SECTIONS}
     clear: list[SubjectSummary] = []
     for s in summaries:
         if s.worst in by_status:
@@ -913,15 +919,13 @@ def page_assets() -> None:
     )
 
     tiles = st.columns(4)
-    for (key, mark, label, note), slot in zip(SECTIONS, tiles):
-        with slot.container(border=True):
-            st.markdown(f"{mark} **{label}**")
-            st.markdown(f"# {len(by_status[key])}件")
-            st.caption(note)
-    with tiles[3].container(border=True):
-        st.markdown("🟢 **問題なし**")
-        st.markdown(f"# {len(clear)}件")
-        st.caption("期限切れ・期限間近はありません")
+    for (key, label, note), slot in zip(SECTIONS, tiles):
+        slot.markdown(ui.tile(key, len(by_status[key]), note, "件"),
+                      unsafe_allow_html=True)
+    tiles[3].markdown(
+        ui.tile("ok", len(clear), "期限切れ・期限間近はありません", "件"),
+        unsafe_allow_html=True,
+    )
 
     left, right = st.columns([1, 1])
 
@@ -951,7 +955,7 @@ def page_assets() -> None:
 
     if keyword:
         hits = [s for s in summaries if keyword in s.subject.search_text]
-        st.markdown(f"##### 🔍 「{keyword}」の検索結果　{len(hits)}件")
+        st.markdown(ui.section(f"「{keyword}」の検索結果", len(hits), "件"), unsafe_allow_html=True)
         if hits:
             st.caption("表示範囲の設定に関係なく、全件から探しています。")
             draw_grid(hits)
@@ -962,17 +966,17 @@ def page_assets() -> None:
         shown_clear = st.session_state.get("scope-asset") == "すべて"
 
         any_shown = False
-        for key, mark, label, _ in SECTIONS:
+        for key, label, _ in SECTIONS:
             items = by_status[key]
             if not items:
                 continue
             any_shown = True
-            st.markdown(f"##### {mark} {label}　{len(items)}件")
+            st.markdown(ui.section(label, len(items), "件"), unsafe_allow_html=True)
             draw_grid(items)
 
         if shown_clear and clear:
             any_shown = True
-            st.markdown(f"##### 🟢 問題なし　{len(clear)}件")
+            st.markdown(ui.section("問題なし", len(clear), "件"), unsafe_allow_html=True)
             draw_grid(clear)
 
         if not any_shown:
