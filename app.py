@@ -35,7 +35,7 @@ from core.review import (
     submission_check,
     summarize_by_subject,
 )
-from core.schedule import ScheduleError, validate_done_on
+from core.schedule import ScheduleError, add_months, validate_done_on
 from core.store import SEED_PATH, load_ledger
 
 st.set_page_config(page_title="期限台帳", page_icon="📋", layout="wide")
@@ -186,6 +186,7 @@ def draw_card(summary: SubjectSummary, slot) -> None:
         ):
             st.session_state["selected"] = subject.id
             st.session_state.pop("recording", None)
+            st.session_state.pop("selected_holding", None)
             st.rerun()
 
 
@@ -276,6 +277,7 @@ def draw_detail(kind: str) -> None:
         key="btn-back",
     ):
         st.session_state.pop("selected", None)
+        st.session_state.pop("selected_holding", None)
         st.rerun()
     edit.button(
         "この道具の情報を編集する" if is_asset else "この人の情報を編集する",
@@ -362,7 +364,17 @@ def draw_detail(kind: str) -> None:
     for row in rows:
         cols = st.columns(widths)
         cols[0].caption(OBLIGATION_LABEL[row.requirement.obligation])
-        cols[1].write(row.requirement.name)
+        # 名称を押すと、その記録の詳細（履歴・根拠・添付）へ移る。
+        if cols[1].button(
+            row.requirement.name,
+            key=f"to-holding-{row.holding.id}",
+            type="tertiary",
+            width="stretch",
+        ):
+            st.session_state["selected_holding"] = row.holding.id
+            st.session_state.pop("recording", None)
+            st.session_state.pop("adding", None)
+            st.rerun()
         cols[2].write(state_label(row))
         cols[3].write(deadline_text(row))
         cols[4].write(situation_text(row))
@@ -404,6 +416,238 @@ def draw_detail(kind: str) -> None:
         "・次回予定日は受講や点検の予約が取れている日です。期限の判定には使いません。"
         "予定を実績として扱うと、超過が隠れてしまうためです。"
     )
+
+
+# 修了証などの画像を預かる機能。公開デモでは閉じておく。
+#
+# 修了証には氏名・生年月日・証番号が写る。社員の画面からは、期限の判定に使わない
+# 個人情報（生年月日・連絡先など）を意図的に外している。そこへ画像として同じものを
+# 入れ直さないよう、既定では受け付けない。実運用で開けるなら、アクセス制御と
+# 保存期間の設計が別に要る。
+ATTACHMENTS_ENABLED = False
+
+
+def next_actions(row: Row) -> list[str]:
+    """状態から、次にやることを組み立てる。
+
+    状態を出すだけでは何をすればよいか分からない。判定と同じ材料から作るので、
+    画面の説明と判定が食い違うことがない。
+    """
+    if not row.requirement.has_deadline:
+        return ["この資格に有効期限はありません。保有の記録として登録されています。"]
+
+    if row.due_on is None:
+        return [
+            "前回の実施日を調べる（本人の手元の証、または事務所の記録）",
+            "下の「実施を記録する」で日付を入力する",
+            "期限が計算され、状態が確定します",
+        ]
+
+    if row.status == "overdue":
+        if row.requirement.date_mode == "cycle":
+            return [
+                "再受講・再点検の申込みを行う",
+                "実施後、修了証や記録を受け取る",
+                "下の「実施を記録する」で日付を入力する",
+                "次の予約が決まっていれば「次回予定日」を入力する",
+            ]
+        return [
+            "更新の手続きを行う",
+            "新しい証に記載された有効期限を登録する",
+            "次の予定が決まっていれば「次回予定日」を入力する",
+        ]
+
+    if row.status == "due_soon":
+        return [
+            "受講・点検の予約を取る",
+            "「次回予定日」に予約した日を入力する",
+            "実施したら「実施を記録する」で日付を入力する",
+        ]
+
+    return ["いま対応は必要ありません。"]
+
+
+def draw_holding_detail(kind: str) -> None:
+    """1 件の資格・点検の詳細。人の詳細から名称を押して来る。"""
+    is_asset = kind == "asset"
+    holding_id = st.session_state["selected_holding"]
+
+    row = next(
+        (r for r in build_rows(lg, today) if r.holding.id == holding_id),
+        None,
+    )
+    if row is None:
+        st.session_state.pop("selected_holding", None)
+        st.rerun()
+        return
+
+    subject, req, holding = row.subject, row.requirement, row.holding
+
+    if st.button(f"← {subject.name} さんの詳細に戻る" if not is_asset
+                 else f"← {subject.name} の詳細に戻る", key="btn-back-holding"):
+        st.session_state.pop("selected_holding", None)
+        st.rerun()
+
+    if _flash:
+        st.success(_flash, icon="✅")
+
+    st.markdown(f"## {req.name}　{state_label(row)}")
+    st.caption(f"{subject.name}（{subject.code}）　{subject.site} ／ {subject.role}")
+
+    left, right = st.columns([3, 2])
+
+    # --- 左：この記録の中身 -------------------------------------------------
+    with left.container(border=True):
+        st.markdown("**この記録の内容**")
+        items: list[tuple[str, str]] = [
+            ("種別", CATEGORY_LABEL[req.category]),
+            ("区分", OBLIGATION_LABEL[req.obligation]),
+            ("期日の決まり方", DATE_MODE_LABEL[req.date_mode]),
+        ]
+        if req.cycle_months:
+            items.append(("周期", f"{req.cycle_months}か月"))
+        # 証面の期限で管理する記録に「前回実施日」は無い。空欄を出すと、
+        # 入れ忘れているように見えてしまう。
+        if req.date_mode == "cycle":
+            items.append(
+                ("前回実施日",
+                 jp_date(holding.last_done_on) if holding.last_done_on else "未入力")
+            )
+        items.append(("有効期限", jp_date(row.due_on) if row.due_on else
+                      ("定めなし" if not req.has_deadline else "計算できません")))
+        items.append(("残り日数・状況", situation_text(row)))
+        items.append(("次回予定日", jp_date(holding.planned_on) if holding.planned_on else "未入力"))
+        items.append(("備考", holding.note or "—"))
+
+        for label, value in items:
+            a, b = st.columns([1, 2])
+            a.caption(label)
+            b.write(value)
+
+    # --- 右：状態と次にやること ---------------------------------------------
+    with right:
+        with st.container(border=True):
+            st.markdown("**現在の状態**")
+            st.markdown(f"### {state_label(row)}")
+            st.write(situation_text(row))
+            if row.blocks_assignment:
+                st.error(
+                    f"この記録が原因で、{subject.name} さんを安全書類に記載できません。"
+                    if not is_asset
+                    else f"この記録が原因で、{subject.name} を使う作業の書類を出せません。",
+                    icon="⚠️",
+                )
+
+        with st.container(border=True):
+            st.markdown("**この記録の次にやること**")
+            actions = next_actions(row)
+            if len(actions) == 1:
+                st.write(actions[0])
+            else:
+                # 1 行ずつ st.write すると箇条書きが毎回作り直され、
+                # すべて「1.」から始まってしまう。ひとつの文字列にまとめて渡す。
+                st.markdown(
+                    "
+".join(f"{i}. {a}" for i, a in enumerate(actions, start=1))
+                )
+
+    # --- 履歴 ---------------------------------------------------------------
+    st.markdown("##### 受講・実施の履歴")
+    if not holding.records:
+        st.info("まだ記録がありません。下の「実施を記録する」から入力してください。")
+    else:
+        widths = [0.8, 1.6, 1.6, 1.4, 2]
+        header = st.columns(widths)
+        for slot, label in zip(header, ["回数", "実施日", "この記録による期限", "実施者", "備考"]):
+            slot.caption(f"**{label}**")
+
+        # 記録は追記のみ。古い順に並べ、何回目かを示す。
+        for i, rec in enumerate(sorted(holding.records, key=lambda r: r.done_on), start=1):
+            cols = st.columns(widths)
+            cols[0].write(f"{i}回目")
+            cols[1].write(jp_date(rec.done_on))
+            if req.date_mode == "cycle" and req.cycle_months:
+                cols[2].write(jp_date(add_months(rec.done_on, req.cycle_months)))
+            else:
+                cols[2].write("—")
+            cols[3].write(rec.done_by or "—")
+            cols[4].write(rec.memo or "—")
+
+    # --- 入力 ---------------------------------------------------------------
+    plan, record = st.columns(2)
+
+    with plan.container(border=True):
+        st.markdown("**次回予定日**")
+        st.caption(
+            "受講や点検の予約が決まっている場合に入力します。"
+            "期限の判定には使いません。"
+        )
+        if not req.has_deadline:
+            st.write("この記録に期限はないため、予定日はありません。")
+        else:
+            planned = st.date_input(
+                "次回予定日",
+                value=holding.planned_on,
+                key=f"detail-plan-{holding.id}",
+                label_visibility="collapsed",
+            )
+            if planned != holding.planned_on:
+                holding.planned_on = planned
+                st.rerun()
+
+    with record.container(border=True):
+        st.markdown("**実施を記録する**")
+        if req.date_mode != "cycle":
+            st.caption(
+                "この記録は実施日ではなく、証に記載された期限で管理します。"
+                if req.has_deadline
+                else "この記録に期限はありません。"
+            )
+        else:
+            c1, c2 = st.columns(2)
+            done_on = c1.date_input("実施した日", value=today, key=f"detail-done-{holding.id}")
+            done_by = c2.text_input("実施者", value="", key=f"detail-by-{holding.id}")
+            if st.button("記録する", type="primary", width="stretch", key="btn-detail-record"):
+                try:
+                    validate_done_on(done_on, today)
+                except ScheduleError as e:
+                    st.error(str(e))
+                else:
+                    holding.add_record(Record(done_on=done_on, done_by=done_by))
+                    holding.planned_on = None
+                    st.session_state["_flash"] = (
+                        f"{req.name} に {jp_date(done_on)} の実施を記録しました。"
+                        "次回の期限を計算し直しました。"
+                    )
+                    st.rerun()
+
+    # --- 根拠と説明 ---------------------------------------------------------
+    with st.container(border=True):
+        st.markdown("**この記録の根拠**")
+        st.write(req.source or "—")
+        if req.note:
+            st.markdown("**補足**")
+            st.write(req.note)
+
+    # --- 添付ファイル（フラグで閉じている） ---------------------------------
+    with st.container(border=True):
+        st.markdown("**修了証・証明書の画像**")
+        if ATTACHMENTS_ENABLED:
+            st.file_uploader(
+                "画像を追加する", type=["png", "jpg", "jpeg", "pdf"],
+                key=f"upload-{holding.id}",
+            )
+        else:
+            st.file_uploader(
+                "画像を追加する", type=["png", "jpg", "jpeg", "pdf"],
+                key=f"upload-{holding.id}", disabled=True,
+            )
+            st.caption(
+                "※ この機能は公開デモでは無効にしています。"
+                "修了証には氏名・生年月日・証番号が写るため、"
+                "誰でも触れる状態で本物を預かることを避けています。"
+                "実運用で有効にする場合は、アクセス制御と保存期間の設計が別に必要です。"
+            )
 
 
 def draw_add_form(subject, rows: list[Row], is_asset: bool) -> None:
@@ -532,7 +776,10 @@ def page_people() -> None:
     selected_id = st.session_state.get("selected")
     selected = lg.subject(selected_id) if selected_id else None
     if selected is not None and selected.kind == "person":
-        draw_detail("person")
+        if st.session_state.get("selected_holding"):
+            draw_holding_detail("person")
+        else:
+            draw_detail("person")
         return
 
     summaries = summarize_by_subject(lg, today, kind="person")
@@ -642,7 +889,10 @@ def page_assets() -> None:
     selected_id = st.session_state.get("selected")
     selected = lg.subject(selected_id) if selected_id else None
     if selected is not None and selected.kind == "asset":
-        draw_detail("asset")
+        if st.session_state.get("selected_holding"):
+            draw_holding_detail("asset")
+        else:
+            draw_detail("asset")
         return
 
     summaries = summarize_by_subject(lg, today, kind="asset")
