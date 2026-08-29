@@ -113,7 +113,7 @@ with st.sidebar:
     st.markdown("**メニュー**")
     nav = st.radio(
         "メニュー",
-        ["人", "道具・機器", "安全書類の提出前チェック", "種類の設定"],
+        ["社員の資格・健診", "道具・機器の点検", "安全書類の提出前チェック", "種類の設定"],
         label_visibility="collapsed",
         key="nav",
     )
@@ -130,9 +130,9 @@ with st.sidebar:
 lg = ledger()
 today = date.today()
 
-if nav != "人":
+if nav != "社員の資格・健診":
     st.title(nav)
-    st.info(f"{NOT_BUILT}。左の「人」を選んでください。")
+    st.info(f"{NOT_BUILT}。左の「社員の資格・健診」を選んでください。")
     st.stop()
 
 
@@ -151,7 +151,7 @@ for s in summaries:
 if _flash:
     st.success(_flash, icon="✅")
 
-st.title("人の期限確認")
+st.title("社員の資格・健診")
 st.caption(
     "期限切れ → 日付未入力・期限計算不可 → 期限間近 の順に表示します。"
     "上から順に確認してください。"
