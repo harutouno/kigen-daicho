@@ -128,5 +128,35 @@
     "cycle_months": 12,
     "source": "ISO 9001:2015 9.2 内部監査。",
     "note": "認証を維持している以上、計画された間隔で実施する必要がある。"
+  },
+  {
+    "id": "req-insulator-check",
+    "name": "絶縁用保護具・防具の定期自主検査",
+    "category": "inspection",
+    "obligation": "legal",
+    "date_mode": "cycle",
+    "cycle_months": 6,
+    "source": "労働安全衛生規則 第351条。6か月以内ごとに1回。",
+    "note": "交流300Vを超える低圧・高圧・特別高圧で使う絶縁手袋・長靴・シートなどが対象。外観検査に加えて耐電圧試験が要る。検査記録は3年保存。周期が半年と短く、現物の数も多いため、抜けが起きやすい。"
+  },
+  {
+    "id": "req-specific-inspection",
+    "name": "特定自主検査",
+    "category": "inspection",
+    "obligation": "legal",
+    "date_mode": "cycle",
+    "cycle_months": 12,
+    "source": "労働安全衛生法。1年を超えない期間ごとに1回（不整地運搬車は2年に1回）。",
+    "note": "高所作業車・車両系建設機械が対象。有資格者または登録検査業者が実施し、標章を貼付する。記録は3年保存。令和8年1月1日から新しい検査基準が適用。"
+  },
+  {
+    "id": "req-vehicle-inspection",
+    "name": "自動車の継続検査（車検）",
+    "category": "inspection",
+    "obligation": "legal",
+    "date_mode": "fixed",
+    "cycle_months": null,
+    "source": "道路運送車両法。有効期間は車種・用途により異なる。",
+    "note": "周期は車種や用途で変わるため計算しない。車検証に記載された満了日をそのまま登録する。"
   }
 ]

@@ -112,13 +112,25 @@ class Requirement:
 
 @dataclass(frozen=True)
 class Subject:
-    """期限の対象。社員か設備。"""
+    """期限の対象。社員か道具・機器。
+
+    道具は名前では特定できない。「絶縁手袋」は何組もあるため、現物にたどり着くには
+    管理番号が要る。型番は校正や修理を頼むときに要る。社員には使わない。
+    """
 
     id: str
     name: str
     kind: Literal["person", "asset"]
     site: str = ""
     role: str = ""
+    code: str = ""
+    model: str = ""
+
+    @property
+    def search_text(self) -> str:
+        """検索で引っかける対象。名称・保管場所に加え、道具は管理番号と型番でも引く。"""
+        parts = [self.name, self.name.replace(" ", ""), self.site, self.code, self.model]
+        return " ".join(p for p in parts if p)
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> Subject:
@@ -128,6 +140,8 @@ class Subject:
             kind=d.get("kind", "person"),
             site=d.get("site", ""),
             role=d.get("role", ""),
+            code=d.get("code", ""),
+            model=d.get("model", ""),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -137,6 +151,8 @@ class Subject:
             "kind": self.kind,
             "site": self.site,
             "role": self.role,
+            "code": self.code,
+            "model": self.model,
         }
 
 

@@ -96,8 +96,9 @@ def reason_text(row: Row) -> str:
 # ウィジェットが作られたあとに session_state を書き換えられないため、
 # ボタンによる要求は、次の実行の先頭でここに反映する。
 
-if st.session_state.pop("_request_show_all", False):
-    st.session_state["scope"] = "全員"
+_show_all_key = st.session_state.pop("_request_show_all", None)
+if _show_all_key:
+    st.session_state[_show_all_key] = "全員"
 
 # 記録直後に画面を作り直すため、その場で出したメッセージは消えてしまう。
 # 次の実行に持ち越して表示する。何も言われないと、記録できたのか分からない。
@@ -118,9 +119,16 @@ with st.sidebar:
         key="nav",
     )
 
+    # 登録の入口は、いま見ている画面に合わせて言葉を変える。
+    # 道具の画面で「社員を登録」と出ていると、押す先を間違える。
+    if nav == PAGE_ASSETS:
+        add_labels = ("道具・機器を登録", "点検の記録を追加")
+    else:
+        add_labels = ("社員を登録", "社員に資格・講習を追加")
+
     st.markdown("**登録**")
-    st.button("社員を登録", width="stretch", key="btn-add-person", disabled=True)
-    st.button("社員に資格・講習を追加", width="stretch", key="btn-add-qual", disabled=True)
+    st.button(add_labels[0], width="stretch", key="btn-add-subject", disabled=True)
+    st.button(add_labels[1], width="stretch", key="btn-add-holding", disabled=True)
     st.caption("※ 登録はまだ作っていません")
 
     st.divider()
@@ -135,11 +143,21 @@ today = date.today()
 
 
 def draw_card(summary: SubjectSummary, slot) -> None:
-    """カード 1 枚。状態を作り出している資格そのものを出す。"""
+    """カード 1 枚。状態を作り出している資格・点検そのものを出す。"""
+    subject = summary.subject
+    is_asset = subject.kind == "asset"
+
     # 見出しには「期限間近（30日以内）」と出すが、カードの中は幅が狭いので短い方を使う。
     with slot.container(border=True):
-        st.markdown(f"##### {summary.subject.name}")
-        st.caption(f"{summary.subject.site} ／ {summary.subject.role}")
+        st.markdown(f"##### {subject.name}")
+        if is_asset:
+            # 道具は名前では特定できない。「絶縁手袋」は何組もあるため、
+            # 現物にたどり着くには管理番号が要る。型番は校正や修理を頼むときに要る。
+            st.caption(f"管理番号：{subject.code}　／　{subject.site}")
+            if subject.model:
+                st.caption(f"型番：{subject.model}")
+        else:
+            st.caption(f"{subject.site} ／ {subject.role}")
         st.markdown(f"**{STATUS_TEXT[summary.worst]}**")
 
         cause = summary.cause
@@ -156,11 +174,11 @@ def draw_card(summary: SubjectSummary, slot) -> None:
 
         st.caption(f"ほかに対応が必要な項目：{summary.other_action_count}件")
         if st.button(
-            "資格・健診を確認",
-            key=f"open-{summary.subject.id}",
+            "点検の記録を見る" if is_asset else "資格・健診を確認",
+            key=f"open-{subject.id}",
             width="stretch",
         ):
-            st.session_state["selected"] = summary.subject.id
+            st.session_state["selected"] = subject.id
 
 
 def draw_grid(items: list[SubjectSummary]) -> None:
@@ -170,29 +188,49 @@ def draw_grid(items: list[SubjectSummary]) -> None:
             draw_card(summary, slot)
 
 
-def draw_selected_person() -> None:
-    """選んだ人の中身。開閉ではなく、常にある領域の中身が入れ替わる。"""
+def draw_selected(kind: str) -> None:
+    """選んだ対象の中身。開閉ではなく、常にある領域の中身が入れ替わる。"""
+    is_asset = kind == "asset"
+    heading = "選んだ道具・機器" if is_asset else "選んだ人"
+    empty = (
+        "上のカードの「点検の記録を見る」を押すと、その道具の点検がここに出ます。"
+        if is_asset
+        else "上のカードの「資格・健診を確認」を押すと、その人の資格がここに出ます。"
+    )
+
     st.divider()
-    st.markdown("#### 選んだ人")
+    st.markdown(f"#### {heading}")
 
     selected_id = st.session_state.get("selected")
     selected = lg.subject(selected_id) if selected_id else None
+    # 人の画面で選んだものが道具の画面に残らないようにする。
+    if selected is not None and selected.kind != kind:
+        selected = None
 
     with st.container(border=True):
         if selected is None:
-            st.write("上のカードの「資格・健診を確認」を押すと、その人の資格がここに出ます。")
+            st.write(empty)
             return
 
         head, close = st.columns([4, 1])
         head.markdown(f"##### {selected.name}")
-        head.caption(f"{selected.site} ／ {selected.role}")
+        if is_asset:
+            head.caption(f"管理番号：{selected.code}　／　{selected.site}")
+            if selected.model:
+                head.caption(f"型番：{selected.model}")
+        else:
+            head.caption(f"{selected.site} ／ {selected.role}")
         if close.button("閉じる", width="stretch", key="btn-close-detail"):
             st.session_state.pop("selected", None)
             st.rerun()
 
         rows = [r for r in build_rows(lg, today) if r.subject.id == selected.id]
         if not rows:
-            st.info("この人には資格・講習・健診がまだ登録されていません。")
+            st.info(
+                "この道具には点検がまだ登録されていません。"
+                if is_asset
+                else "この人には資格・講習・健診がまだ登録されていません。"
+            )
 
         for row in rows:
             with st.container(border=True):
@@ -207,7 +245,7 @@ def draw_selected_person() -> None:
                     st.write(STATUS_TEXT[row.status])
 
                     if not row.requirement.has_deadline:
-                        st.caption("この資格に有効期限はありません（保有の記録）")
+                        st.caption("この資格に有効期限はありません（保有の記録）")  # noqa: E501
                     elif row.due_on is None:
                         st.caption("前回の日付が入っていないため、次回の期日を出せません")
                     else:
@@ -224,7 +262,11 @@ def draw_selected_person() -> None:
 
                 with action:
                     if row.requirement.date_mode != "cycle":
-                        st.caption("実施日ではなく、証に記載の期限で管理する項目です")
+                        st.caption(
+                            "実施日ではなく、車検証・証に記載の期限で管理する項目です"
+                            if is_asset
+                            else "実施日ではなく、証に記載の期限で管理する項目です"
+                        )
                         continue
 
                     done_on = st.date_input(
@@ -347,11 +389,112 @@ def page_people() -> None:
             note, action = st.columns([3, 1])
             note.info(f"問題なしの人が{len(clear)}人います。「全員」を選ぶと表示できます。")
             if action.button("全員を表示する", width="stretch", key="btn-show-all"):
-                st.session_state["_request_show_all"] = True
+                st.session_state["_request_show_all"] = "scope"
                 st.rerun()
 
-    draw_selected_person()
+    draw_selected("person")
 
+
+# --- 道具・機器の点検 -----------------------------------------------------
+
+
+def page_assets() -> None:
+    summaries = summarize_by_subject(lg, today, kind="asset")
+
+    by_status: dict[str, list[SubjectSummary]] = {key: [] for key, _, _, _ in SECTIONS}
+    clear: list[SubjectSummary] = []
+    for s in summaries:
+        if s.worst in by_status:
+            by_status[s.worst].append(s)
+        else:
+            clear.append(s)
+
+    if _flash:
+        st.success(_flash, icon="✅")
+
+    st.title(PAGE_ASSETS)
+    st.caption(
+        "期限切れ → 日付未入力・期限計算不可 → 期限間近 の順に表示します。"
+        "上から順に確認してください。"
+    )
+
+    tiles = st.columns(4)
+    for (key, mark, label, note), slot in zip(SECTIONS, tiles):
+        with slot.container(border=True):
+            st.markdown(f"{mark} **{label}**")
+            st.markdown(f"# {len(by_status[key])}件")
+            st.caption(note)
+    with tiles[3].container(border=True):
+        st.markdown("🟢 **問題なし**")
+        st.markdown(f"# {len(clear)}件")
+        st.caption("期限切れ・期限間近はありません")
+
+    left, right = st.columns([1, 1])
+
+    with left:
+        st.markdown("**名称・管理番号・型番・保管場所で検索**")
+        st.caption("表示範囲に関係なく全件から探します。「川内」で保管場所も引けます。")
+        keyword = st.text_input(
+            "検索",
+            placeholder="例：絶縁手袋　GLO-002　HIOKI　川内",
+            label_visibility="collapsed",
+            key="search-asset",
+        ).strip()
+
+    with right:
+        st.markdown("**表示範囲を選んでください**")
+        st.radio(
+            "表示範囲",
+            ["対応が必要なものだけ", "すべて"],
+            horizontal=True,
+            label_visibility="collapsed",
+            key="scope-asset",
+            captions=[
+                "期限切れ・期限間近・日付未入力のものを表示",
+                "問題なしのものも含めてすべて表示",
+            ],
+        )
+
+    if keyword:
+        hits = [s for s in summaries if keyword in s.subject.search_text]
+        st.markdown(f"##### 🔍 「{keyword}」の検索結果　{len(hits)}件")
+        if hits:
+            st.caption("表示範囲の設定に関係なく、全件から探しています。")
+            draw_grid(hits)
+        else:
+            st.warning(f"「{keyword}」に一致する道具・機器は登録されていません。")
+            st.caption(f"※ 新しく登録する機能は{NOT_BUILT}。")
+    else:
+        shown_clear = st.session_state.get("scope-asset") == "すべて"
+
+        any_shown = False
+        for key, mark, label, _ in SECTIONS:
+            items = by_status[key]
+            if not items:
+                continue
+            any_shown = True
+            st.markdown(f"##### {mark} {label}　{len(items)}件")
+            draw_grid(items)
+
+        if shown_clear and clear:
+            any_shown = True
+            st.markdown(f"##### 🟢 問題なし　{len(clear)}件")
+            draw_grid(clear)
+
+        if not any_shown:
+            st.success("対応が必要な道具・機器はありません。")
+
+        if not shown_clear and clear:
+            note, action = st.columns([3, 1])
+            note.info(
+                f"問題なしの道具・機器が{len(clear)}件あります。"
+                "「すべて」を選ぶと表示できます。"
+            )
+            if action.button("すべて表示する", width="stretch", key="btn-show-all-asset"):
+                st.session_state["_request_show_all"] = "scope-asset"
+                st.rerun()
+
+    draw_selected("asset")
 
 # --- 安全書類の提出前チェック ---------------------------------------------
 
@@ -552,6 +695,8 @@ def page_types() -> None:
 
 if nav == PAGE_PEOPLE:
     page_people()
+elif nav == PAGE_ASSETS:
+    page_assets()
 elif nav == PAGE_SUBMISSION:
     page_submission()
 elif nav == PAGE_TYPES:

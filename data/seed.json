@@ -132,6 +132,36 @@
       "cycle_months": 12,
       "source": "ISO 9001:2015 9.2 内部監査。",
       "note": "認証を維持している以上、計画された間隔で実施する必要がある。"
+    },
+    {
+      "id": "req-insulator-check",
+      "name": "絶縁用保護具・防具の定期自主検査",
+      "category": "inspection",
+      "obligation": "legal",
+      "date_mode": "cycle",
+      "cycle_months": 6,
+      "source": "労働安全衛生規則 第351条。6か月以内ごとに1回。",
+      "note": "交流300Vを超える低圧・高圧・特別高圧で使う絶縁手袋・長靴・シートなどが対象。外観検査に加えて耐電圧試験が要る。検査記録は3年保存。周期が半年と短く、現物の数も多いため、抜けが起きやすい。"
+    },
+    {
+      "id": "req-specific-inspection",
+      "name": "特定自主検査",
+      "category": "inspection",
+      "obligation": "legal",
+      "date_mode": "cycle",
+      "cycle_months": 12,
+      "source": "労働安全衛生法。1年を超えない期間ごとに1回（不整地運搬車は2年に1回）。",
+      "note": "高所作業車・車両系建設機械が対象。有資格者または登録検査業者が実施し、標章を貼付する。記録は3年保存。令和8年1月1日から新しい検査基準が適用。"
+    },
+    {
+      "id": "req-vehicle-inspection",
+      "name": "自動車の継続検査（車検）",
+      "category": "inspection",
+      "obligation": "legal",
+      "date_mode": "fixed",
+      "cycle_months": null,
+      "source": "道路運送車両法。有効期間は車種・用途により異なる。",
+      "note": "周期は車種や用途で変わるため計算しない。車検証に記載された満了日をそのまま登録する。"
     }
   ],
   "subjects": [
@@ -666,6 +696,330 @@
       "kind": "person",
       "site": "姶良支店",
       "role": "施工管理"
+    },
+    {
+      "id": "a-GLO-001",
+      "name": "絶縁手袋 A組",
+      "kind": "asset",
+      "site": "鹿児島本社",
+      "role": "絶縁用保護具",
+      "code": "GLO-001",
+      "model": "YOTSUGI YS-101-23-01"
+    },
+    {
+      "id": "a-GLO-002",
+      "name": "絶縁手袋 B組",
+      "kind": "asset",
+      "site": "川内支店",
+      "role": "絶縁用保護具",
+      "code": "GLO-002",
+      "model": "YOTSUGI YS-101-23-01"
+    },
+    {
+      "id": "a-GLO-003",
+      "name": "絶縁手袋 C組",
+      "kind": "asset",
+      "site": "国分支店",
+      "role": "絶縁用保護具",
+      "code": "GLO-003",
+      "model": "YOTSUGI YS-101-23-01"
+    },
+    {
+      "id": "a-GLO-004",
+      "name": "絶縁手袋 D組",
+      "kind": "asset",
+      "site": "志布志支店",
+      "role": "絶縁用保護具",
+      "code": "GLO-004",
+      "model": "YOTSUGI YS-101-23-01"
+    },
+    {
+      "id": "a-GLO-005",
+      "name": "絶縁手袋 E組",
+      "kind": "asset",
+      "site": "姶良支店",
+      "role": "絶縁用保護具",
+      "code": "GLO-005",
+      "model": "YOTSUGI YS-101-23-01"
+    },
+    {
+      "id": "a-GLO-006",
+      "name": "絶縁手袋 F組",
+      "kind": "asset",
+      "site": "苓北支店",
+      "role": "絶縁用保護具",
+      "code": "GLO-006",
+      "model": "YOTSUGI YS-101-23-01"
+    },
+    {
+      "id": "a-BOO-001",
+      "name": "絶縁長靴 A組",
+      "kind": "asset",
+      "site": "鹿児島本社",
+      "role": "絶縁用保護具",
+      "code": "BOO-001",
+      "model": "YOTSUGI YS-201-25"
+    },
+    {
+      "id": "a-BOO-002",
+      "name": "絶縁長靴 B組",
+      "kind": "asset",
+      "site": "川内支店",
+      "role": "絶縁用保護具",
+      "code": "BOO-002",
+      "model": "YOTSUGI YS-201-25"
+    },
+    {
+      "id": "a-BOO-003",
+      "name": "絶縁長靴 C組",
+      "kind": "asset",
+      "site": "国分支店",
+      "role": "絶縁用保護具",
+      "code": "BOO-003",
+      "model": "YOTSUGI YS-201-25"
+    },
+    {
+      "id": "a-BOO-004",
+      "name": "絶縁長靴 D組",
+      "kind": "asset",
+      "site": "姶良支店",
+      "role": "絶縁用保護具",
+      "code": "BOO-004",
+      "model": "YOTSUGI YS-201-25"
+    },
+    {
+      "id": "a-SHT-001",
+      "name": "絶縁シート 1号",
+      "kind": "asset",
+      "site": "鹿児島本社",
+      "role": "絶縁用保護具",
+      "code": "SHT-001",
+      "model": "YOTSUGI YS-232-01"
+    },
+    {
+      "id": "a-SHT-002",
+      "name": "絶縁シート 2号",
+      "kind": "asset",
+      "site": "川内支店",
+      "role": "絶縁用保護具",
+      "code": "SHT-002",
+      "model": "YOTSUGI YS-232-01"
+    },
+    {
+      "id": "a-SHT-003",
+      "name": "絶縁シート 3号",
+      "kind": "asset",
+      "site": "志布志支店",
+      "role": "絶縁用保護具",
+      "code": "SHT-003",
+      "model": "YOTSUGI YS-232-01"
+    },
+    {
+      "id": "a-SHT-004",
+      "name": "絶縁シート 4号",
+      "kind": "asset",
+      "site": "苓北支店",
+      "role": "絶縁用保護具",
+      "code": "SHT-004",
+      "model": "YOTSUGI YS-232-01"
+    },
+    {
+      "id": "a-AWP-01",
+      "name": "高所作業車 10m",
+      "kind": "asset",
+      "site": "鹿児島本社",
+      "role": "車両",
+      "code": "AWP-01",
+      "model": "アイチ SR10A"
+    },
+    {
+      "id": "a-AWP-02",
+      "name": "高所作業車 12m",
+      "kind": "asset",
+      "site": "川内支店",
+      "role": "車両",
+      "code": "AWP-02",
+      "model": "タダノ AT-121TG"
+    },
+    {
+      "id": "a-INS-001",
+      "name": "絶縁抵抗計 No.1",
+      "kind": "asset",
+      "site": "鹿児島本社",
+      "role": "測定機器",
+      "code": "INS-001",
+      "model": "HIOKI IR4052"
+    },
+    {
+      "id": "a-INS-002",
+      "name": "絶縁抵抗計 No.2",
+      "kind": "asset",
+      "site": "川内支店",
+      "role": "測定機器",
+      "code": "INS-002",
+      "model": "HIOKI IR4052"
+    },
+    {
+      "id": "a-INS-003",
+      "name": "絶縁抵抗計 No.3",
+      "kind": "asset",
+      "site": "国分支店",
+      "role": "測定機器",
+      "code": "INS-003",
+      "model": "HIOKI IR4052"
+    },
+    {
+      "id": "a-ERT-001",
+      "name": "接地抵抗計 No.1",
+      "kind": "asset",
+      "site": "鹿児島本社",
+      "role": "測定機器",
+      "code": "ERT-001",
+      "model": "HIOKI FT6031-50"
+    },
+    {
+      "id": "a-ERT-002",
+      "name": "接地抵抗計 No.2",
+      "kind": "asset",
+      "site": "志布志支店",
+      "role": "測定機器",
+      "code": "ERT-002",
+      "model": "HIOKI FT6031-50"
+    },
+    {
+      "id": "a-CLA-001",
+      "name": "クランプメータ No.1",
+      "kind": "asset",
+      "site": "鹿児島本社",
+      "role": "測定機器",
+      "code": "CLA-001",
+      "model": "HIOKI 3280-10F"
+    },
+    {
+      "id": "a-CLA-002",
+      "name": "クランプメータ No.2",
+      "kind": "asset",
+      "site": "姶良支店",
+      "role": "測定機器",
+      "code": "CLA-002",
+      "model": "HIOKI 3280-10F"
+    },
+    {
+      "id": "a-DMM-001",
+      "name": "デジタルマルチメータ No.1",
+      "kind": "asset",
+      "site": "鹿児島本社",
+      "role": "測定機器",
+      "code": "DMM-001",
+      "model": "FLUKE 117"
+    },
+    {
+      "id": "a-DMM-002",
+      "name": "デジタルマルチメータ No.2",
+      "kind": "asset",
+      "site": "苓北支店",
+      "role": "測定機器",
+      "code": "DMM-002",
+      "model": "FLUKE 117"
+    },
+    {
+      "id": "a-VOL-001",
+      "name": "検電器 No.1",
+      "kind": "asset",
+      "site": "国分支店",
+      "role": "測定機器",
+      "code": "VOL-001",
+      "model": "長谷川電機 HST-6"
+    },
+    {
+      "id": "a-VOL-002",
+      "name": "検電器 No.2",
+      "kind": "asset",
+      "site": "川内支店",
+      "role": "測定機器",
+      "code": "VOL-002",
+      "model": "長谷川電機 HST-6"
+    },
+    {
+      "id": "a-LD-001",
+      "name": "レーザー距離計",
+      "kind": "asset",
+      "site": "鹿児島本社",
+      "role": "測定機器",
+      "code": "LD-001",
+      "model": "BOSCH GLM50C"
+    },
+    {
+      "id": "a-CAR-001",
+      "name": "社用車 1号",
+      "kind": "asset",
+      "site": "鹿児島本社",
+      "role": "車両",
+      "code": "CAR-001",
+      "model": "トヨタ ハイエース"
+    },
+    {
+      "id": "a-CAR-002",
+      "name": "社用車 2号",
+      "kind": "asset",
+      "site": "川内支店",
+      "role": "車両",
+      "code": "CAR-002",
+      "model": "トヨタ ハイエース"
+    },
+    {
+      "id": "a-CAR-003",
+      "name": "社用車 3号",
+      "kind": "asset",
+      "site": "国分支店",
+      "role": "車両",
+      "code": "CAR-003",
+      "model": "日産 NV200"
+    },
+    {
+      "id": "a-CAR-004",
+      "name": "社用車 4号",
+      "kind": "asset",
+      "site": "志布志支店",
+      "role": "車両",
+      "code": "CAR-004",
+      "model": "日産 NV200"
+    },
+    {
+      "id": "a-CAR-005",
+      "name": "社用車 5号",
+      "kind": "asset",
+      "site": "姶良支店",
+      "role": "車両",
+      "code": "CAR-005",
+      "model": "スズキ エブリイ"
+    },
+    {
+      "id": "a-CAR-006",
+      "name": "社用車 6号",
+      "kind": "asset",
+      "site": "苓北支店",
+      "role": "車両",
+      "code": "CAR-006",
+      "model": "スズキ エブリイ"
+    },
+    {
+      "id": "a-CAR-007",
+      "name": "社用車 7号",
+      "kind": "asset",
+      "site": "鹿児島本社",
+      "role": "車両",
+      "code": "CAR-007",
+      "model": "トヨタ ハイエース"
+    },
+    {
+      "id": "a-CAR-008",
+      "name": "社用車 8号",
+      "kind": "asset",
+      "site": "川内支店",
+      "role": "車両",
+      "code": "CAR-008",
+      "model": "日産 NV200"
     }
   ],
   "holdings": [
@@ -1855,6 +2209,444 @@
           "memo": "定期健診"
         }
       ],
+      "note": ""
+    },
+    {
+      "id": "h-0091",
+      "subject_id": "a-GLO-001",
+      "requirement_id": "req-insulator-check",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-02-07",
+          "done_by": "外部委託",
+          "memo": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0092",
+      "subject_id": "a-GLO-002",
+      "requirement_id": "req-insulator-check",
+      "fixed_due_on": null,
+      "records": [],
+      "note": "前回の点検日が台帳に無い。"
+    },
+    {
+      "id": "h-0093",
+      "subject_id": "a-GLO-003",
+      "requirement_id": "req-insulator-check",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-03-10",
+          "done_by": "外部委託",
+          "memo": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0094",
+      "subject_id": "a-GLO-004",
+      "requirement_id": "req-insulator-check",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-06-03",
+          "done_by": "外部委託",
+          "memo": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0095",
+      "subject_id": "a-GLO-005",
+      "requirement_id": "req-insulator-check",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-06-27",
+          "done_by": "外部委託",
+          "memo": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0096",
+      "subject_id": "a-GLO-006",
+      "requirement_id": "req-insulator-check",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-07-22",
+          "done_by": "外部委託",
+          "memo": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0097",
+      "subject_id": "a-BOO-001",
+      "requirement_id": "req-insulator-check",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-03-18",
+          "done_by": "外部委託",
+          "memo": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0098",
+      "subject_id": "a-BOO-002",
+      "requirement_id": "req-insulator-check",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-05-26",
+          "done_by": "外部委託",
+          "memo": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0099",
+      "subject_id": "a-BOO-003",
+      "requirement_id": "req-insulator-check",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-07-09",
+          "done_by": "外部委託",
+          "memo": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0100",
+      "subject_id": "a-BOO-004",
+      "requirement_id": "req-insulator-check",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-08-06",
+          "done_by": "外部委託",
+          "memo": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0101",
+      "subject_id": "a-SHT-001",
+      "requirement_id": "req-insulator-check",
+      "fixed_due_on": null,
+      "records": [],
+      "note": "前回の点検日が台帳に無い。"
+    },
+    {
+      "id": "h-0102",
+      "subject_id": "a-SHT-002",
+      "requirement_id": "req-insulator-check",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-03-25",
+          "done_by": "外部委託",
+          "memo": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0103",
+      "subject_id": "a-SHT-003",
+      "requirement_id": "req-insulator-check",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-06-11",
+          "done_by": "外部委託",
+          "memo": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0104",
+      "subject_id": "a-SHT-004",
+      "requirement_id": "req-insulator-check",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-07-28",
+          "done_by": "外部委託",
+          "memo": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0105",
+      "subject_id": "a-AWP-01",
+      "requirement_id": "req-specific-inspection",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2025-07-14",
+          "done_by": "外部委託",
+          "memo": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0106",
+      "subject_id": "a-AWP-02",
+      "requirement_id": "req-specific-inspection",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2025-09-19",
+          "done_by": "外部委託",
+          "memo": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0107",
+      "subject_id": "a-INS-001",
+      "requirement_id": "req-instrument-cal",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2025-07-25",
+          "done_by": "外部委託",
+          "memo": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0108",
+      "subject_id": "a-INS-002",
+      "requirement_id": "req-instrument-cal",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2025-10-31",
+          "done_by": "外部委託",
+          "memo": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0109",
+      "subject_id": "a-INS-003",
+      "requirement_id": "req-instrument-cal",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-01-24",
+          "done_by": "外部委託",
+          "memo": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0110",
+      "subject_id": "a-ERT-001",
+      "requirement_id": "req-instrument-cal",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2025-09-14",
+          "done_by": "外部委託",
+          "memo": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0111",
+      "subject_id": "a-ERT-002",
+      "requirement_id": "req-instrument-cal",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-03-18",
+          "done_by": "外部委託",
+          "memo": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0112",
+      "subject_id": "a-CLA-001",
+      "requirement_id": "req-instrument-cal",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2025-09-09",
+          "done_by": "外部委託",
+          "memo": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0113",
+      "subject_id": "a-CLA-002",
+      "requirement_id": "req-instrument-cal",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-02-19",
+          "done_by": "外部委託",
+          "memo": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0114",
+      "subject_id": "a-DMM-001",
+      "requirement_id": "req-instrument-cal",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2025-09-14",
+          "done_by": "外部委託",
+          "memo": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0115",
+      "subject_id": "a-DMM-002",
+      "requirement_id": "req-instrument-cal",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-04-19",
+          "done_by": "外部委託",
+          "memo": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0116",
+      "subject_id": "a-VOL-001",
+      "requirement_id": "req-instrument-cal",
+      "fixed_due_on": null,
+      "records": [],
+      "note": "前回の点検日が台帳に無い。"
+    },
+    {
+      "id": "h-0117",
+      "subject_id": "a-VOL-002",
+      "requirement_id": "req-instrument-cal",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2026-03-06",
+          "done_by": "外部委託",
+          "memo": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0118",
+      "subject_id": "a-LD-001",
+      "requirement_id": "req-instrument-cal",
+      "fixed_due_on": null,
+      "records": [
+        {
+          "done_on": "2025-09-24",
+          "done_by": "外部委託",
+          "memo": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "h-0119",
+      "subject_id": "a-CAR-001",
+      "requirement_id": "req-vehicle-inspection",
+      "fixed_due_on": "2026-08-11",
+      "records": [],
+      "note": ""
+    },
+    {
+      "id": "h-0120",
+      "subject_id": "a-CAR-002",
+      "requirement_id": "req-vehicle-inspection",
+      "fixed_due_on": "2026-09-22",
+      "records": [],
+      "note": ""
+    },
+    {
+      "id": "h-0121",
+      "subject_id": "a-CAR-003",
+      "requirement_id": "req-vehicle-inspection",
+      "fixed_due_on": "2026-11-14",
+      "records": [],
+      "note": ""
+    },
+    {
+      "id": "h-0122",
+      "subject_id": "a-CAR-004",
+      "requirement_id": "req-vehicle-inspection",
+      "fixed_due_on": "2027-01-08",
+      "records": [],
+      "note": ""
+    },
+    {
+      "id": "h-0123",
+      "subject_id": "a-CAR-005",
+      "requirement_id": "req-vehicle-inspection",
+      "fixed_due_on": "2027-03-15",
+      "records": [],
+      "note": ""
+    },
+    {
+      "id": "h-0124",
+      "subject_id": "a-CAR-006",
+      "requirement_id": "req-vehicle-inspection",
+      "fixed_due_on": "2027-05-01",
+      "records": [],
+      "note": ""
+    },
+    {
+      "id": "h-0125",
+      "subject_id": "a-CAR-007",
+      "requirement_id": "req-vehicle-inspection",
+      "fixed_due_on": "2027-06-14",
+      "records": [],
+      "note": ""
+    },
+    {
+      "id": "h-0126",
+      "subject_id": "a-CAR-008",
+      "requirement_id": "req-vehicle-inspection",
+      "fixed_due_on": "2027-07-26",
+      "records": [],
       "note": ""
     }
   ]

@@ -223,6 +223,98 @@ def build() -> dict:
         add_holding(f"p-{i:03d}", "req-kenshin",
                     records=[{"done_on": iso(done), "done_by": "総務", "memo": "定期健診"}])
 
+    # --- 道具・機器 -------------------------------------------------------
+    #
+    # 道具は名前だけでは特定できないので、管理番号と型番を持たせる。
+    # 「期限まであと何日か」を指定して、そこから前回実施日を逆算する。
+
+    def add_asset(
+        code: str, name: str, model: str, site: str, role: str,
+        requirement_id: str, *, days_until_due: int | None = None,
+        cycle_months: int = 0, fixed_due_in: int | None = None,
+    ) -> None:
+        subject_id = f"a-{code}"
+        subjects.append({
+            "id": subject_id, "name": name, "kind": "asset",
+            "site": site, "role": role, "code": code, "model": model,
+        })
+        if fixed_due_in is not None:
+            add_holding(subject_id, requirement_id,
+                        fixed_due_on=iso(TODAY + timedelta(days=fixed_due_in)))
+        elif days_until_due is None:
+            # 前回の点検日が台帳に無い状態。期日を計算できない。
+            add_holding(subject_id, requirement_id,
+                        note="前回の点検日が台帳に無い。")
+        else:
+            last = TODAY + timedelta(days=days_until_due - round(cycle_months * 30.44))
+            add_holding(subject_id, requirement_id,
+                        records=[{"done_on": iso(last), "done_by": "外部委託", "memo": ""}])
+
+    INS = "req-insulator-check"        # 絶縁用保護具（6か月）
+    SPC = "req-specific-inspection"    # 特定自主検査（12か月）
+    CAL = "req-instrument-cal"         # 測定機器の校正（12か月）
+    VEH = "req-vehicle-inspection"     # 車検（期日指定）
+
+    # 絶縁用保護具。周期が6か月と短く、現物の数が多い。抜けが起きやすい。
+    gloves = [
+        ("GLO-001", "絶縁手袋 A組", "YOTSUGI YS-101-23-01", "鹿児島本社", -20),
+        ("GLO-002", "絶縁手袋 B組", "YOTSUGI YS-101-23-01", "川内支店", None),
+        ("GLO-003", "絶縁手袋 C組", "YOTSUGI YS-101-23-01", "国分支店", 11),
+        ("GLO-004", "絶縁手袋 D組", "YOTSUGI YS-101-23-01", "志布志支店", 96),
+        ("GLO-005", "絶縁手袋 E組", "YOTSUGI YS-101-23-01", "姶良支店", 120),
+        ("GLO-006", "絶縁手袋 F組", "YOTSUGI YS-101-23-01", "苓北支店", 145),
+        ("BOO-001", "絶縁長靴 A組", "YOTSUGI YS-201-25", "鹿児島本社", 19),
+        ("BOO-002", "絶縁長靴 B組", "YOTSUGI YS-201-25", "川内支店", 88),
+        ("BOO-003", "絶縁長靴 C組", "YOTSUGI YS-201-25", "国分支店", 132),
+        ("BOO-004", "絶縁長靴 D組", "YOTSUGI YS-201-25", "姶良支店", 160),
+        ("SHT-001", "絶縁シート 1号", "YOTSUGI YS-232-01", "鹿児島本社", None),
+        ("SHT-002", "絶縁シート 2号", "YOTSUGI YS-232-01", "川内支店", 26),
+        ("SHT-003", "絶縁シート 3号", "YOTSUGI YS-232-01", "志布志支店", 104),
+        ("SHT-004", "絶縁シート 4号", "YOTSUGI YS-232-01", "苓北支店", 151),
+    ]
+    for code, name, model, site, days in gloves:
+        add_asset(code, name, model, site, "絶縁用保護具", INS,
+                  days_until_due=days, cycle_months=6)
+
+    # 高所作業車。特定自主検査は1年以内ごと。
+    add_asset("AWP-01", "高所作業車 10m", "アイチ SR10A", "鹿児島本社", "車両",
+              SPC, days_until_due=-46, cycle_months=12)
+    add_asset("AWP-02", "高所作業車 12m", "タダノ AT-121TG", "川内支店", "車両",
+              SPC, days_until_due=21, cycle_months=12)
+
+    # 測定機器。校正が切れた機器で測った記録は成績書として使えない。
+    meters = [
+        ("INS-001", "絶縁抵抗計 No.1", "HIOKI IR4052", "鹿児島本社", -35),
+        ("INS-002", "絶縁抵抗計 No.2", "HIOKI IR4052", "川内支店", 63),
+        ("INS-003", "絶縁抵抗計 No.3", "HIOKI IR4052", "国分支店", 148),
+        ("ERT-001", "接地抵抗計 No.1", "HIOKI FT6031-50", "鹿児島本社", 16),
+        ("ERT-002", "接地抵抗計 No.2", "HIOKI FT6031-50", "志布志支店", 201),
+        ("CLA-001", "クランプメータ No.1", "HIOKI 3280-10F", "鹿児島本社", 11),
+        ("CLA-002", "クランプメータ No.2", "HIOKI 3280-10F", "姶良支店", 174),
+        ("DMM-001", "デジタルマルチメータ No.1", "FLUKE 117", "鹿児島本社", 16),
+        ("DMM-002", "デジタルマルチメータ No.2", "FLUKE 117", "苓北支店", 233),
+        ("VOL-001", "検電器 No.1", "長谷川電機 HST-6", "国分支店", None),
+        ("VOL-002", "検電器 No.2", "長谷川電機 HST-6", "川内支店", 189),
+        ("LD-001", "レーザー距離計", "BOSCH GLM50C", "鹿児島本社", 26),
+    ]
+    for code, name, model, site, days in meters:
+        add_asset(code, name, model, site, "測定機器", CAL,
+                  days_until_due=days, cycle_months=12)
+
+    # 社用車。周期ではなく車検証に書かれた満了日で管理する。
+    cars = [
+        ("CAR-001", "社用車 1号", "トヨタ ハイエース", "鹿児島本社", -18),
+        ("CAR-002", "社用車 2号", "トヨタ ハイエース", "川内支店", 24),
+        ("CAR-003", "社用車 3号", "日産 NV200", "国分支店", 77),
+        ("CAR-004", "社用車 4号", "日産 NV200", "志布志支店", 132),
+        ("CAR-005", "社用車 5号", "スズキ エブリイ", "姶良支店", 198),
+        ("CAR-006", "社用車 6号", "スズキ エブリイ", "苓北支店", 245),
+        ("CAR-007", "社用車 7号", "トヨタ ハイエース", "鹿児島本社", 289),
+        ("CAR-008", "社用車 8号", "日産 NV200", "川内支店", 331),
+    ]
+    for code, name, model, site, days in cars:
+        add_asset(code, name, model, site, "車両", VEH, fixed_due_in=days)
+
     # 同姓同名がいると、画面でどちらの話をしているのか分からなくなる。
     # 生成規則を変えたときに気づけるよう、書き出す前に検査する。
     names = [s["name"] for s in subjects]
