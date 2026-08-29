@@ -546,10 +546,8 @@ def draw_holding_detail(kind: str) -> None:
             else:
                 # 1 行ずつ st.write すると箇条書きが毎回作り直され、
                 # すべて「1.」から始まってしまう。ひとつの文字列にまとめて渡す。
-                st.markdown(
-                    "
-".join(f"{i}. {a}" for i, a in enumerate(actions, start=1))
-                )
+                lines = [f"{i}. {a}" for i, a in enumerate(actions, start=1)]
+                st.markdown("\n".join(lines))
 
     # --- 履歴 ---------------------------------------------------------------
     st.markdown("##### 受講・実施の履歴")
