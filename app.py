@@ -929,10 +929,10 @@ def page_assets() -> None:
 
     with left:
         st.markdown("**名称・管理番号・型番・保管場所で検索**")
-        st.caption("表示範囲に関係なく全件から探します。「川内」で保管場所も引けます。")
+        st.caption("表示範囲に関係なく全件から探します。「鹿屋」で保管場所も引けます。")
         keyword = st.text_input(
             "検索",
-            placeholder="例：絶縁手袋　GLO-002　HIOKI　川内",
+            placeholder="例：絶縁手袋　GLO-002　HIOKI　鹿屋",
             label_visibility="collapsed",
             key="search-asset",
         ).strip()

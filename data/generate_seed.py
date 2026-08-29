@@ -27,7 +27,10 @@ OUT = Path(__file__).resolve().parent / "seed.json"
 # 走らせれば、いつでも同じ配分になる。
 TODAY = date.today()
 
-SITES = ["鹿児島本社", "川内支店", "国分支店", "志布志支店", "姶良支店", "苓北支店"]
+# 拠点名は架空。実在の会社の事業所一覧と一致させないこと。
+# 一致していると、社名を書かなくてもどの会社の話か分かってしまう。
+# 実在の地名を借りているが、この組み合わせは実在の会社のものではない。
+SITES = ["本社", "鹿屋支店", "指宿支店", "出水支店", "枕崎支店", "奄美支店"]
 ROLES = ["施工管理", "電気工事", "保守・計装", "事務"]
 
 SURNAMES = [
@@ -92,7 +95,7 @@ def build() -> dict:
     named = [
         # 資格者証は有効なのに講習だけ切れている。片方だけ見ると通してしまう例。
         {
-            "id": "p-001", "code": "E-0001", "kana": "さこだ かずき", "name": "迫田 和樹", "site": "鹿児島本社", "role": "施工管理",
+            "id": "p-001", "code": "E-0001", "kana": "さこだ かずき", "name": "迫田 和樹", "site": "本社", "role": "施工管理",
             "holdings": [
                 ("req-kanri-cert", {"fixed_due_on": iso(TODAY + timedelta(days=214))}),
                 ("req-kanri-course", {"fixed_due_on": iso(TODAY - timedelta(days=29)),
@@ -111,7 +114,7 @@ def build() -> dict:
         },
         # 健診が大きく超過している例。
         {
-            "id": "p-002", "code": "E-0002", "kana": "たなか しんいち", "name": "田中 新一", "site": "志布志支店", "role": "施工管理",
+            "id": "p-002", "code": "E-0002", "kana": "たなか しんいち", "name": "田中 新一", "site": "出水支店", "role": "施工管理",
             "holdings": [
                 ("req-kenshin", {"records": [{"done_on": iso(TODAY - timedelta(days=476)),
                                               "done_by": "総務", "memo": "定期健診"}]}),
@@ -119,7 +122,7 @@ def build() -> dict:
         },
         # 定期講習が切れている例。
         {
-            "id": "p-003", "code": "E-0003", "kana": "やまぐち まさと", "name": "山口 正人", "site": "川内支店", "role": "電気工事",
+            "id": "p-003", "code": "E-0003", "kana": "やまぐち まさと", "name": "山口 正人", "site": "鹿屋支店", "role": "電気工事",
             "holdings": [
                 ("req-den1-course", {"records": [{"done_on": iso(TODAY - timedelta(days=1962)),
                                                   "done_by": "本人", "memo": "定期講習"}]}),
@@ -131,7 +134,7 @@ def build() -> dict:
         },
         # 前回受講日が台帳に無く、期日を計算できない例。
         {
-            "id": "p-004", "code": "E-0004", "kana": "ひがし りょう", "name": "東 亮", "site": "鹿児島本社", "role": "施工管理",
+            "id": "p-004", "code": "E-0004", "kana": "ひがし りょう", "name": "東 亮", "site": "本社", "role": "施工管理",
             "holdings": [
                 ("req-den1-course", {"note": "免状は保有しているが前回の受講日が台帳に無い。"}),
                 ("req-den1-menjo", {}),
@@ -141,7 +144,7 @@ def build() -> dict:
         },
         # 同じく未確定。危険物の保安講習。
         {
-            "id": "p-005", "code": "E-0005", "kana": "なかむら けんいち", "name": "中村 健一", "site": "国分支店", "role": "電気工事",
+            "id": "p-005", "code": "E-0005", "kana": "なかむら けんいち", "name": "中村 健一", "site": "指宿支店", "role": "電気工事",
             "holdings": [
                 ("req-kikenbutsu-course", {"note": "従事開始時の受講日が不明。"}),
                 ("req-kenshin", {"records": [{"done_on": iso(TODAY - timedelta(days=52)),
@@ -150,14 +153,14 @@ def build() -> dict:
         },
         # 期限が近い人たち。
         {
-            "id": "p-006", "code": "E-0006", "kana": "やました たろう", "name": "山下 太郎", "site": "鹿児島本社", "role": "施工管理",
+            "id": "p-006", "code": "E-0006", "kana": "やました たろう", "name": "山下 太郎", "site": "本社", "role": "施工管理",
             "holdings": [
                 ("req-kenshin", {"records": [{"done_on": iso(TODAY - timedelta(days=353)),
                                               "done_by": "総務", "memo": "定期健診"}]}),
             ],
         },
         {
-            "id": "p-007", "code": "E-0007", "kana": "さとう たつや", "name": "佐藤 龍也", "site": "志布志支店", "role": "電気工事",
+            "id": "p-007", "code": "E-0007", "kana": "さとう たつや", "name": "佐藤 龍也", "site": "出水支店", "role": "電気工事",
             "holdings": [
                 ("req-den1-course", {"records": [{"done_on": iso(TODAY - timedelta(days=1804)),
                                                   "done_by": "本人", "memo": "定期講習"}]}),
@@ -165,7 +168,7 @@ def build() -> dict:
             ],
         },
         {
-            "id": "p-008", "code": "E-0008", "kana": "まつもと ゆうすけ", "name": "松本 裕介", "site": "川内支店", "role": "施工管理",
+            "id": "p-008", "code": "E-0008", "kana": "まつもと ゆうすけ", "name": "松本 裕介", "site": "鹿屋支店", "role": "施工管理",
             "holdings": [
                 ("req-kenshin", {"records": [{"done_on": iso(TODAY - timedelta(days=338)),
                                               "done_by": "総務", "memo": "定期健診"}]}),
@@ -173,14 +176,14 @@ def build() -> dict:
             ],
         },
         {
-            "id": "p-009", "code": "E-0009", "kana": "かとう ゆみ", "name": "加藤 由美", "site": "姶良支店", "role": "事務",
+            "id": "p-009", "code": "E-0009", "kana": "かとう ゆみ", "name": "加藤 由美", "site": "枕崎支店", "role": "事務",
             "holdings": [
                 ("req-kenshin", {"records": [{"done_on": iso(TODAY - timedelta(days=335)),
                                               "done_by": "総務", "memo": "定期健診"}]}),
             ],
         },
         {
-            "id": "p-010", "code": "E-0010", "kana": "いまむら かずや", "name": "今村 和也", "site": "苓北支店", "role": "電気工事",
+            "id": "p-010", "code": "E-0010", "kana": "いまむら かずや", "name": "今村 和也", "site": "奄美支店", "role": "電気工事",
             "holdings": [
                 ("req-kikenbutsu-course", {"records": [{"done_on": iso(TODAY - timedelta(days=1064)),
                                                         "done_by": "本人", "memo": "保安講習"}]}),
@@ -190,7 +193,7 @@ def build() -> dict:
         },
         # 監理技術者として配置できる人（比較用）。
         {
-            "id": "p-011", "code": "E-0011", "kana": "ありむら ちひろ", "name": "有村 千尋", "site": "鹿児島本社", "role": "保守・計装",
+            "id": "p-011", "code": "E-0011", "kana": "ありむら ちひろ", "name": "有村 千尋", "site": "本社", "role": "保守・計装",
             "holdings": [
                 ("req-kanri-cert", {"fixed_due_on": iso(TODAY + timedelta(days=1189))}),
                 ("req-kanri-course", {"fixed_due_on": iso(TODAY + timedelta(days=1220))}),
@@ -201,7 +204,7 @@ def build() -> dict:
         },
         # 有効期限のない免状しか持っていない人（灰色に数えない例）。
         {
-            "id": "p-012", "code": "E-0012", "kana": "かわばた ゆう", "name": "川畑 悠", "site": "姶良支店", "role": "電気工事",
+            "id": "p-012", "code": "E-0012", "kana": "かわばた ゆう", "name": "川畑 悠", "site": "枕崎支店", "role": "電気工事",
             "holdings": [
                 ("req-den1-menjo", {}),
                 ("req-kenshin", {"records": [{"done_on": iso(TODAY - timedelta(days=100)),
@@ -268,45 +271,45 @@ def build() -> dict:
 
     # 絶縁用保護具。周期が6か月と短く、現物の数が多い。抜けが起きやすい。
     gloves = [
-        ("GLO-001", "絶縁手袋 A組", "YOTSUGI YS-101-23-01", "鹿児島本社", -20),
-        ("GLO-002", "絶縁手袋 B組", "YOTSUGI YS-101-23-01", "川内支店", None),
-        ("GLO-003", "絶縁手袋 C組", "YOTSUGI YS-101-23-01", "国分支店", 11),
-        ("GLO-004", "絶縁手袋 D組", "YOTSUGI YS-101-23-01", "志布志支店", 96),
-        ("GLO-005", "絶縁手袋 E組", "YOTSUGI YS-101-23-01", "姶良支店", 120),
-        ("GLO-006", "絶縁手袋 F組", "YOTSUGI YS-101-23-01", "苓北支店", 145),
-        ("BOO-001", "絶縁長靴 A組", "YOTSUGI YS-201-25", "鹿児島本社", 19),
-        ("BOO-002", "絶縁長靴 B組", "YOTSUGI YS-201-25", "川内支店", 88),
-        ("BOO-003", "絶縁長靴 C組", "YOTSUGI YS-201-25", "国分支店", 132),
-        ("BOO-004", "絶縁長靴 D組", "YOTSUGI YS-201-25", "姶良支店", 160),
-        ("SHT-001", "絶縁シート 1号", "YOTSUGI YS-232-01", "鹿児島本社", None),
-        ("SHT-002", "絶縁シート 2号", "YOTSUGI YS-232-01", "川内支店", 26),
-        ("SHT-003", "絶縁シート 3号", "YOTSUGI YS-232-01", "志布志支店", 104),
-        ("SHT-004", "絶縁シート 4号", "YOTSUGI YS-232-01", "苓北支店", 151),
+        ("GLO-001", "絶縁手袋 A組", "YOTSUGI YS-101-23-01", "本社", -20),
+        ("GLO-002", "絶縁手袋 B組", "YOTSUGI YS-101-23-01", "鹿屋支店", None),
+        ("GLO-003", "絶縁手袋 C組", "YOTSUGI YS-101-23-01", "指宿支店", 11),
+        ("GLO-004", "絶縁手袋 D組", "YOTSUGI YS-101-23-01", "出水支店", 96),
+        ("GLO-005", "絶縁手袋 E組", "YOTSUGI YS-101-23-01", "枕崎支店", 120),
+        ("GLO-006", "絶縁手袋 F組", "YOTSUGI YS-101-23-01", "奄美支店", 145),
+        ("BOO-001", "絶縁長靴 A組", "YOTSUGI YS-201-25", "本社", 19),
+        ("BOO-002", "絶縁長靴 B組", "YOTSUGI YS-201-25", "鹿屋支店", 88),
+        ("BOO-003", "絶縁長靴 C組", "YOTSUGI YS-201-25", "指宿支店", 132),
+        ("BOO-004", "絶縁長靴 D組", "YOTSUGI YS-201-25", "枕崎支店", 160),
+        ("SHT-001", "絶縁シート 1号", "YOTSUGI YS-232-01", "本社", None),
+        ("SHT-002", "絶縁シート 2号", "YOTSUGI YS-232-01", "鹿屋支店", 26),
+        ("SHT-003", "絶縁シート 3号", "YOTSUGI YS-232-01", "出水支店", 104),
+        ("SHT-004", "絶縁シート 4号", "YOTSUGI YS-232-01", "奄美支店", 151),
     ]
     for code, name, model, site, days in gloves:
         add_asset(code, name, model, site, "絶縁用保護具", INS,
                   days_until_due=days, cycle_months=6)
 
     # 高所作業車。特定自主検査は1年以内ごと。
-    add_asset("AWP-01", "高所作業車 10m", "アイチ SR10A", "鹿児島本社", "車両",
+    add_asset("AWP-01", "高所作業車 10m", "アイチ SR10A", "本社", "車両",
               SPC, days_until_due=-46, cycle_months=12)
-    add_asset("AWP-02", "高所作業車 12m", "タダノ AT-121TG", "川内支店", "車両",
+    add_asset("AWP-02", "高所作業車 12m", "タダノ AT-121TG", "鹿屋支店", "車両",
               SPC, days_until_due=21, cycle_months=12)
 
     # 測定機器。校正が切れた機器で測った記録は成績書として使えない。
     meters = [
-        ("INS-001", "絶縁抵抗計 No.1", "HIOKI IR4052", "鹿児島本社", -35),
-        ("INS-002", "絶縁抵抗計 No.2", "HIOKI IR4052", "川内支店", 63),
-        ("INS-003", "絶縁抵抗計 No.3", "HIOKI IR4052", "国分支店", 148),
-        ("ERT-001", "接地抵抗計 No.1", "HIOKI FT6031-50", "鹿児島本社", 16),
-        ("ERT-002", "接地抵抗計 No.2", "HIOKI FT6031-50", "志布志支店", 201),
-        ("CLA-001", "クランプメータ No.1", "HIOKI 3280-10F", "鹿児島本社", 11),
-        ("CLA-002", "クランプメータ No.2", "HIOKI 3280-10F", "姶良支店", 174),
-        ("DMM-001", "デジタルマルチメータ No.1", "FLUKE 117", "鹿児島本社", 16),
-        ("DMM-002", "デジタルマルチメータ No.2", "FLUKE 117", "苓北支店", 233),
-        ("VOL-001", "検電器 No.1", "長谷川電機 HST-6", "国分支店", None),
-        ("VOL-002", "検電器 No.2", "長谷川電機 HST-6", "川内支店", 189),
-        ("LD-001", "レーザー距離計", "BOSCH GLM50C", "鹿児島本社", 26),
+        ("INS-001", "絶縁抵抗計 No.1", "HIOKI IR4052", "本社", -35),
+        ("INS-002", "絶縁抵抗計 No.2", "HIOKI IR4052", "鹿屋支店", 63),
+        ("INS-003", "絶縁抵抗計 No.3", "HIOKI IR4052", "指宿支店", 148),
+        ("ERT-001", "接地抵抗計 No.1", "HIOKI FT6031-50", "本社", 16),
+        ("ERT-002", "接地抵抗計 No.2", "HIOKI FT6031-50", "出水支店", 201),
+        ("CLA-001", "クランプメータ No.1", "HIOKI 3280-10F", "本社", 11),
+        ("CLA-002", "クランプメータ No.2", "HIOKI 3280-10F", "枕崎支店", 174),
+        ("DMM-001", "デジタルマルチメータ No.1", "FLUKE 117", "本社", 16),
+        ("DMM-002", "デジタルマルチメータ No.2", "FLUKE 117", "奄美支店", 233),
+        ("VOL-001", "検電器 No.1", "長谷川電機 HST-6", "指宿支店", None),
+        ("VOL-002", "検電器 No.2", "長谷川電機 HST-6", "鹿屋支店", 189),
+        ("LD-001", "レーザー距離計", "BOSCH GLM50C", "本社", 26),
     ]
     for code, name, model, site, days in meters:
         add_asset(code, name, model, site, "測定機器", CAL,
@@ -314,14 +317,14 @@ def build() -> dict:
 
     # 社用車。周期ではなく車検証に書かれた満了日で管理する。
     cars = [
-        ("CAR-001", "社用車 1号", "トヨタ ハイエース", "鹿児島本社", -18),
-        ("CAR-002", "社用車 2号", "トヨタ ハイエース", "川内支店", 24),
-        ("CAR-003", "社用車 3号", "日産 NV200", "国分支店", 77),
-        ("CAR-004", "社用車 4号", "日産 NV200", "志布志支店", 132),
-        ("CAR-005", "社用車 5号", "スズキ エブリイ", "姶良支店", 198),
-        ("CAR-006", "社用車 6号", "スズキ エブリイ", "苓北支店", 245),
-        ("CAR-007", "社用車 7号", "トヨタ ハイエース", "鹿児島本社", 289),
-        ("CAR-008", "社用車 8号", "日産 NV200", "川内支店", 331),
+        ("CAR-001", "社用車 1号", "トヨタ ハイエース", "本社", -18),
+        ("CAR-002", "社用車 2号", "トヨタ ハイエース", "鹿屋支店", 24),
+        ("CAR-003", "社用車 3号", "日産 NV200", "指宿支店", 77),
+        ("CAR-004", "社用車 4号", "日産 NV200", "出水支店", 132),
+        ("CAR-005", "社用車 5号", "スズキ エブリイ", "枕崎支店", 198),
+        ("CAR-006", "社用車 6号", "スズキ エブリイ", "奄美支店", 245),
+        ("CAR-007", "社用車 7号", "トヨタ ハイエース", "本社", 289),
+        ("CAR-008", "社用車 8号", "日産 NV200", "鹿屋支店", 331),
     ]
     for code, name, model, site, days in cars:
         add_asset(code, name, model, site, "車両", VEH, fixed_due_in=days)

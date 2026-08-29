@@ -58,7 +58,7 @@ def make_ledger() -> Ledger:
         ],
         subjects=[
             Subject(id="p1", name="甲", kind="person", site="本社"),
-            Subject(id="p2", name="乙", kind="person", site="川内支店"),
+            Subject(id="p2", name="乙", kind="person", site="鹿屋支店"),
         ],
         holdings=[],
     )
