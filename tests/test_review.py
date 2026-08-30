@@ -353,14 +353,59 @@ def test_問題のない人はほかの件数が0になる():
     assert summary.other_action_count == 0
 
 
-def test_何も登録が無い人は問題なしになる():
+def test_何も登録が無い人は問題なしにしない():
+    """登録しただけの人を「問題なし」に見せない。
+
+    このテストは以前「問題なしになる」ことを確かめていた。だが登録直後の人は
+    問題が無いのではなく、何も分かっていないだけである。緑の側に畳まれると、
+    登録して放置された人が一覧から消える。間違った仕様をテストで守っていたので、
+    仕様ごと直した。
+    """
     lg = make_ledger()
     lg.subjects = [Subject(id="p1", name="新入", kind="person")]
     lg.holdings = []
     summary = summarize_by_subject(lg, TODAY)[0]
-    assert summary.worst == "ok"
+    assert summary.worst == "unregistered"
+    assert summary.needs_action is True
     assert summary.rows == []
     assert summary.cause_due_on is None
+
+
+def test_資格情報なしは日付未入力の次に並ぶ():
+    """どちらも『分かっていない』状態だが、日付未入力は書類を止める。
+
+    資格情報なしは登録作業がまだ済んでいないという意味なので、その次に置く。
+    どちらも期限間近より上。期限間近はまだ何も止めないため。
+    """
+    lg = make_ledger()
+    lg.subjects = [
+        Subject(id="p1", name="超過", kind="person"),
+        Subject(id="p2", name="未入力", kind="person"),
+        Subject(id="p3", name="未登録", kind="person"),
+        Subject(id="p4", name="間近", kind="person"),
+    ]
+    lg.holdings = [
+        Holding(id="h1", subject_id="p1", requirement_id="cert",
+                fixed_due_on=date(2026, 6, 30)),
+        Holding(id="h2", subject_id="p2", requirement_id="kenshin", records=[]),
+        # p3 は holdings を持たない
+        Holding(id="h4", subject_id="p4", requirement_id="kenshin",
+                records=[Record(done_on=date(2025, 9, 10))]),
+    ]
+    order = [s.subject.name for s in summarize_by_subject(lg, TODAY)]
+    assert order == ["超過", "未入力", "未登録", "間近"]
+
+
+def test_期限のない資格だけ持つ人は資格情報なしにしない():
+    """免状だけでも登録されていれば、何も分かっていない状態ではない。"""
+    lg = make_ledger()
+    lg.subjects = [Subject(id="p1", name="甲", kind="person")]
+    lg.holdings = [
+        Holding(id="h1", subject_id="p1", requirement_id="menjo", records=[])
+    ]
+    summary = summarize_by_subject(lg, TODAY)[0]
+    assert summary.worst == "ok"
+    assert summary.needs_action is False
 
 
 def test_人と道具を分けて集約できる():

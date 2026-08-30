@@ -23,6 +23,8 @@ STATE_STYLE: dict[str, tuple[str, str, str, str, str]] = {
     "due_soon": ("期限間近", "期限間近", "#FFFBEB", "#FCD34D", "#B45309"),
     "ok":       ("問題なし", "問題なし", "#F0FDF4", "#86EFAC", "#15803D"),
     "none":     ("有効（期限なし）", "有効（期限なし）", "#EFF6FF", "#93C5FD", "#1D4ED8"),
+    # 赤・橙・緑は意味を持っているので使えず、灰は日付未入力が使っている。
+    "unregistered": ("資格情報なし", "資格情報なし", "#F5F3FF", "#C4B5FD", "#6D28D9"),
 }
 
 CSS = """

@@ -28,6 +28,7 @@ from core.schedule import (
 __all__ = [
     "Row",
     "STATUS_ORDER",
+    "UNREGISTERED",
     "SubjectSummary",
     "build_rows",
     "summarize_by_subject",
@@ -40,12 +41,19 @@ __all__ = [
 #
 # 超過を未確定より先に出す。未確定の方が実態としては危ないこともあるが、
 # 超過は「今日その人を現場に出せない」ので、先に手を付ける必要があるため。
-STATUS_ORDER: dict[Status, int] = {
+#
+# 「unregistered」は、その対象に記録が 1 件も無い状態。Status には無く、
+# 対象ごとの集約でだけ現れる。日付未入力の隣に置くのは、どちらも
+# 「分かっていない」状態で、性質が近いため。
+UNREGISTERED = "unregistered"
+
+STATUS_ORDER: dict[str, int] = {
     "overdue": 0,
     "unknown": 1,
-    "due_soon": 2,
-    "upcoming": 3,
-    "ok": 4,
+    UNREGISTERED: 2,
+    "due_soon": 3,
+    "upcoming": 4,
+    "ok": 5,
 }
 
 
@@ -114,7 +122,7 @@ class SubjectSummary:
 
     subject: Subject
     rows: list[Row]
-    worst: Status
+    worst: str
     cause_due_on: date | None
     cause_days_left: int | None
     cause: Row | None
@@ -126,8 +134,12 @@ class SubjectSummary:
 
         画面には手を付けるべきものだけを出し、それ以外は畳む。
         「予告」（まだ先だが期日が見えている）は今日やることが無いので畳む側に入れる。
+
+        記録が 1 件も無い対象も手を付ける側に入れる。問題が無いのではなく、
+        何も分かっていないだけであり、それを「問題なし」に見せると、
+        登録しただけで放置された人が緑の側へ消える。
         """
-        return self.worst in ("overdue", "unknown", "due_soon")
+        return self.worst in ("overdue", "unknown", UNREGISTERED, "due_soon")
 
 
 def summarize_by_subject(
@@ -160,7 +172,9 @@ def summarize_by_subject(
         owned = by_subject.get(subject.id, [])
         judged = [r for r in owned if r.requirement.has_deadline]
 
-        worst: Status = "ok"
+        # 記録が 1 件も無いのは「問題なし」ではない。何も分かっていないだけ。
+        # 登録しただけの人が緑の側に消えないよう、別の状態として扱う。
+        worst: str = UNREGISTERED if not owned else "ok"
         for row in judged:
             if STATUS_ORDER[row.status] < STATUS_ORDER[worst]:
                 worst = row.status

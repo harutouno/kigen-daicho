@@ -6,7 +6,7 @@
 画面の決まりごと:
   * 折りたたまない。押す先はすべて最初から見えている状態にする。
   * 状態を色だけで表さない。色の隣に必ず言葉を置く。
-  * 危険なものほど上・左に来る。並びは 期限切れ → 日付未入力 → 期限間近。
+  * 危険なものほど上・左に来る。並びは 期限切れ → 日付未入力 → 資格情報なし → 期限間近。
   * 期日を計算できないものを「問題なし」に見せない。
   * まだ作っていない操作は、押せる状態で置かない。無効にして理由を書く。
 """
@@ -53,6 +53,7 @@ PAGE_TYPES = "種類の設定"
 SECTIONS: list[tuple[str, str, str]] = [
     ("overdue", "期限切れ", "期限を過ぎています"),
     ("unknown", "日付未入力・期限計算不可", "前回日が未入力で計算できません"),
+    ("unregistered", "資格情報なし", "まだ何も登録されていません"),
     ("due_soon", "期限間近（30日以内）", "30日以内に期限が来ます"),
 ]
 
@@ -60,6 +61,7 @@ SECTIONS: list[tuple[str, str, str]] = [
 PILL_STATE: dict[str, str] = {
     "overdue": "overdue",
     "unknown": "unknown",
+    "unregistered": "unregistered",
     "due_soon": "due_soon",
     "upcoming": "ok",
     "ok": "ok",
@@ -870,11 +872,11 @@ def page_people() -> None:
         "上から順に確認してください。"
     )
 
-    tiles = st.columns(4)
+    tiles = st.columns(len(SECTIONS) + 1)
     for (key, label, note), slot in zip(SECTIONS, tiles):
         slot.markdown(ui.tile(key, len(by_status[key]), note, "人"),
                       unsafe_allow_html=True)
-    tiles[3].markdown(
+    tiles[-1].markdown(
         ui.tile("ok", len(clear), "期限切れ・期限間近はありません", "人"),
         unsafe_allow_html=True,
     )
@@ -981,11 +983,11 @@ def page_assets() -> None:
         "上から順に確認してください。"
     )
 
-    tiles = st.columns(4)
+    tiles = st.columns(len(SECTIONS) + 1)
     for (key, label, note), slot in zip(SECTIONS, tiles):
         slot.markdown(ui.tile(key, len(by_status[key]), note, "件"),
                       unsafe_allow_html=True)
-    tiles[3].markdown(
+    tiles[-1].markdown(
         ui.tile("ok", len(clear), "期限切れ・期限間近はありません", "件"),
         unsafe_allow_html=True,
     )
