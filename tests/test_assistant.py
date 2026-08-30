@@ -183,3 +183,40 @@ def test_言い換え役が嘘の答えを返しても件数は台帳から出�
     # 台帳の実数は 1 件。言い換え役の言う 5 件にはならない。
     assert len(a.rows) == 1
     assert "5件" not in a.headline
+
+
+# --- 日付の解釈 -----------------------------------------------------------
+
+
+def test_年の無い日付は推測せず聞き返す():
+    """「8月1日」が今年か来年かは書いた人にしか分からない。
+
+    外すと提出日を1年ずらして判定することになる。
+    """
+    a = answer(make_ledger(), "8月1日に提出したら何が引っかかる？", TODAY)
+    assert a.kind == "unknown"
+    assert "年" in a.headline
+    assert a.rows == []
+
+
+def test_存在しない日付で落ちない():
+    """2026年2月30日 のような入力で例外にしない。"""
+    a = answer(make_ledger(), "2026年2月30日に提出したら？", TODAY)
+    assert a.kind == "unknown"
+
+
+def test_Nか月後は台帳と同じ月計算にする():
+    """本体が add_months（月末クランプ）なのに、AI だけ30日だと
+    同じ「1か月」が違う日を指す。"""
+    from core.assistant import _parse_date
+    from core.schedule import add_months
+
+    got = _parse_date("6か月後に提出したら？", date(2026, 8, 31))
+    assert got == add_months(date(2026, 8, 31), 6)
+    assert got == date(2027, 2, 28)   # 月末はクランプされる
+
+
+def test_N日後はそのまま日数で数える():
+    from core.assistant import _parse_date
+
+    assert _parse_date("30日後に出す", TODAY) == date(2026, 9, 28)

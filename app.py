@@ -13,12 +13,14 @@
 
 from __future__ import annotations
 
+import uuid
 from dataclasses import replace
 from datetime import date
 
 import streamlit as st
 
 from core.models import (
+    LedgerDataError,
     CATEGORY_LABEL,
     DATE_MODE_LABEL,
     OBLIGATION_LABEL,
@@ -30,6 +32,7 @@ from core.models import (
 )
 from core.review import (
     STATUS_ORDER,
+    UNREGISTERED,
     Row,
     SubjectSummary,
     build_rows,
@@ -59,7 +62,8 @@ SECTIONS: list[tuple[str, str, str]] = [
     ("overdue", "期限切れ", "期限を過ぎています"),
     ("unknown", "日付未入力・期限計算不可", "前回日が未入力で計算できません"),
     ("unregistered", "資格情報なし", "まだ何も登録されていません"),
-    ("due_soon", "期限間近（30日以内）", "30日以内に期限が来ます"),
+    # 日数は設定で変えられるので、表示するときに埋める。
+    ("due_soon", "期限間近（{soon}日以内）", "{soon}日以内に期限が来ます"),
 ]
 
 # 「予告」は 3 色に畳んだので、問題なしとして扱う。
@@ -70,9 +74,20 @@ PILL_STATE: dict[str, str] = {
     "due_soon": "due_soon",
     "upcoming": "ok",
     "ok": "ok",
+    # 期限が存在しないものは、判定側で no_deadline になる。
+    "no_deadline": "none",
 }
 
 NOT_BUILT = "この機能はまだ作っていません"
+
+
+def fill_days(text: str) -> str:
+    """見出しや説明の中の日数を、いま設定されている値で埋める。
+
+    コードに 30 を書き込むと、設定で 90 日に変えても表示だけ 30 のままになり、
+    画面が嘘をつく。
+    """
+    return text.replace("{soon}", str(lg.soon_days))
 
 
 def pill_key(state: str, is_asset: bool = False) -> str:
@@ -112,6 +127,8 @@ def ledger() -> Ledger:
 def reason_text(row: Row) -> str:
     """なぜ書類が通らないのかを、そのまま読める文にする。"""
     if row.due_on is None:
+        if row.requirement.date_mode == "fixed":
+            return "証に記載された有効期限が入っていないため、期限が分かりません"
         return "前回の日付が入っていないため、期限が分かりません"
     return f"{jp_date(row.due_on)} に期限が切れます"
 
@@ -130,9 +147,21 @@ _flash = st.session_state.pop("_flash", None)
 
 # AIサポートの例を押したときも同じ。入力欄はキーを持っているので value では
 # 入らない。次の実行の先頭で、入力欄の値そのものを書き換える。
+# メニューもウィジェットなので、作られたあとには書き換えられない。
+_request_nav = st.session_state.pop("_request_nav", None)
+if _request_nav is not None:
+    st.session_state["nav"] = _request_nav
+
 _ai_example = st.session_state.pop("_ai_example", None)
 if _ai_example is not None:
     st.session_state["ai-question"] = _ai_example
+
+# 検索して見つからなかった言葉を、登録画面の名前欄へ引き継ぐ。
+# 引き継がないと、いま打ったばかりの名前をもう一度打つことになる。
+_prefill_name = st.session_state.pop("_prefill_name", None)
+if _prefill_name is not None:
+    key = "reg-a-name" if st.session_state.get("registering") == "asset" else "reg-name"
+    st.session_state[key] = _prefill_name
 
 
 # --- 左サイドバー ---------------------------------------------------------
@@ -158,7 +187,12 @@ with st.sidebar:
 
     st.markdown("**登録**")
     if st.button(add_labels[0], width="stretch", key="btn-add-subject"):
-        st.session_state["registering"] = "asset" if nav == PAGE_ASSETS else "person"
+        # 登録画面は「社員の資格・健診」「道具・機器の点検」の下にある。
+        # メニューを移さずに登録状態だけ立てると、押しても何も起きず、
+        # あとで一覧へ来たときに突然登録画面が開く。メニューも一緒に移す。
+        kind = "asset" if nav == PAGE_ASSETS else "person"
+        st.session_state["registering"] = kind
+        st.session_state["_request_nav"] = PAGE_ASSETS if kind == "asset" else PAGE_PEOPLE
         st.session_state.pop("selected", None)
         st.session_state.pop("selected_holding", None)
         st.rerun()
@@ -201,18 +235,28 @@ def draw_card(summary: SubjectSummary, slot) -> None:
         st.markdown(ui.pill(key, short=True), unsafe_allow_html=True)
 
         cause = summary.cause
-        if cause is None:
+        if summary.worst == UNREGISTERED:
+            # 「資格情報なし」なのに「対応が必要な項目はありません」と出ていた。
+            # 記録が1件も無いことは、問題が無いことではない。
+            # 一覧では要対応として並べているのに、カードの中で打ち消していた。
+            st.write(
+                "資格・講習・健診が1件も登録されていません。"
+                if not is_asset
+                else "点検の項目が1件も登録されていません。"
+            )
+        elif cause is None:
             st.write("対応が必要な項目はありません")
         else:
             st.markdown(f"**{cause.requirement.name}**")
             if cause.due_on is None:
-                st.write("前回の日付を入力してください")
+                st.write(missing_input_text(cause))
             else:
                 st.write(
                     f"期限：{jp_date(cause.due_on)} {remaining_text(cause.days_left)}"
                 )
 
-        st.caption(f"ほかに対応が必要な項目：{summary.other_action_count}件")
+        if summary.worst != UNREGISTERED:
+            st.caption(f"ほかに対応が必要な項目：{summary.other_action_count}件")
         if st.button(
             "点検の記録を見る" if is_asset else "資格・健診を確認",
             key=f"open-{subject.id}",
@@ -237,9 +281,23 @@ def state_label(row: Row) -> str:
     有効期限が存在しない資格は「未確定」ではない。分かっていないのではなく、
     そもそも期限が無い。混ぜると、本当に日付が入っていない行が埋もれる。
     """
-    if not row.requirement.has_deadline:
-        return ui.pill("none", short=True)
     return ui.pill(PILL_STATE[row.status], short=True)
+
+
+def missing_input_text(row: Row) -> str:
+    """期日が出せないときに、何を入れればよいかを書く。
+
+    due_on が None になる理由は 3 つあり、必要な入力が違う。
+    ひとまとめに「前回の日付を入力してください」と出すと、
+    証面の期限で管理する項目に対して見当違いの案内になる。
+    この判断はここ 1 箇所に集約し、各画面はこれを呼ぶ。
+    """
+    mode = row.requirement.date_mode
+    if mode == "none":
+        return "有効期限の定めなし"
+    if mode == "fixed":
+        return "証に記載された有効期限を入力してください"
+    return "前回の実施日を入力してください"
 
 
 def deadline_text(row: Row) -> str:
@@ -248,6 +306,8 @@ def deadline_text(row: Row) -> str:
         return "有効期限の定めなし"
     if row.due_on is not None:
         return f"期限：{jp_date(row.due_on)}"
+    if row.requirement.date_mode == "fixed":
+        return "有効期限：未入力"
     last = row.holding.last_done_on
     if last is None:
         return "前回実施日：未入力"
@@ -259,7 +319,7 @@ def situation_text(row: Row) -> str:
     if not row.requirement.has_deadline:
         return "期限の定めなし"
     if row.due_on is None:
-        return "前回の日付を入力してください"
+        return missing_input_text(row)
     days = row.days_left or 0
     return f"{-days}日超過" if days < 0 else f"あと{days}日"
 
@@ -282,9 +342,8 @@ def count_states(rows: list[Row]) -> dict[str, int]:
     """1 人（1 台）の中での状態別件数。"""
     counts = {"overdue": 0, "unknown": 0, "due_soon": 0, "ok": 0, "no_deadline": 0}
     for row in rows:
-        if not row.requirement.has_deadline:
-            counts["no_deadline"] += 1
-        elif row.status in ("overdue", "unknown", "due_soon"):
+        # 判定側が no_deadline を返すので、画面で has_deadline を見直す必要はない。
+        if row.status in counts:
             counts[row.status] += 1
         else:
             counts["ok"] += 1
@@ -572,6 +631,12 @@ def next_actions(row: Row) -> list[str]:
         return ["この資格に有効期限はありません。保有の記録として登録されています。"]
 
     if row.due_on is None:
+        if row.requirement.date_mode == "fixed":
+            return [
+                "証の現物を確認する（本人の手元、または事務所の控え）",
+                "下の「新しい有効期限を登録する」で期限を入力する",
+                "状態が確定します",
+            ]
         return [
             "前回の実施日を調べる（本人の手元の証、または事務所の記録）",
             "下の「実施を記録する」で日付を入力する",
@@ -745,14 +810,41 @@ def draw_holding_detail(kind: str) -> None:
                 st.rerun()
 
     with record.container(border=True):
-        st.markdown("**実施を記録する**")
-        if req.date_mode != "cycle":
+        if req.date_mode == "fixed":
+            # 更新して新しい証を受け取ったとき、ここから期限を入れ替える。
+            # これが無いと、期限切れの資格を更新しても台帳が切れたままになる。
+            st.markdown("**新しい有効期限を登録する**")
             st.caption(
-                "この記録は実施日ではなく、証に記載された期限で管理します。"
-                if req.has_deadline
-                else "この記録に期限はありません。"
+                "更新して新しい証を受け取ったら、そこに書かれている期限を入れてください。"
             )
+            new_due = st.date_input(
+                "新しい有効期限",
+                value=holding.fixed_due_on,
+                key=f"detail-newdue-{holding.id}",
+            )
+            if st.button(
+                "この期限に更新する",
+                type="primary",
+                width="stretch",
+                key="btn-detail-renew",
+            ):
+                if new_due == holding.fixed_due_on:
+                    st.info("いまの期限と同じです。変更はありません。")
+                else:
+                    old = holding.fixed_due_on
+                    holding.fixed_due_on = new_due
+                    holding.planned_on = None
+                    st.session_state["_flash"] = (
+                        f"{req.name} の有効期限を "
+                        f"{jp_date(old) if old else '未入力'} から "
+                        f"{jp_date(new_due)} に更新しました。"
+                    )
+                    st.rerun()
+        elif req.date_mode == "none":
+            st.markdown("**実施を記録する**")
+            st.caption("この記録に期限はありません。保有の記録として登録されています。")
         else:
+            st.markdown("**実施を記録する**")
             c1, c2 = st.columns(2)
             done_on = c1.date_input("実施した日", value=today, key=f"detail-done-{holding.id}")
             done_by = c2.text_input("実施者", value="", key=f"detail-by-{holding.id}")
@@ -949,7 +1041,7 @@ def draw_add_form(subject, rows: list[Row], is_asset: bool) -> None:
             )
             lg.holdings.append(
                 Holding(
-                    id=f"h-new-{len(lg.holdings) + 1:04d}",
+                    id=f"h-{uuid.uuid4().hex[:12]}",
                     subject_id=subject.id,
                     requirement_id=req.id,
                     fixed_due_on=fixed_due,
@@ -1032,7 +1124,7 @@ def page_people() -> None:
 
     tiles = st.columns(len(SECTIONS) + 1)
     for (key, label, note), slot in zip(SECTIONS, tiles):
-        slot.markdown(ui.tile(key, len(by_status[key]), note, "人"),
+        slot.markdown(ui.tile(key, len(by_status[key]), fill_days(note), "人"),
                       unsafe_allow_html=True)
     tiles[-1].markdown(
         ui.tile("ok", len(clear), "期限切れ・期限間近はありません", "人"),
@@ -1069,9 +1161,9 @@ def page_people() -> None:
     if keyword:
         hits = [
             s for s in summaries
-            if keyword in s.subject.name
-            or keyword in s.subject.name.replace(" ", "")
-            or keyword in s.subject.site
+            # 登録画面で「ふりがなは検索に使います」と案内しているので、
+            # 道具と同じく search_text で引く。
+            if keyword in s.subject.search_text
         ]
         st.markdown(ui.section(f"「{keyword}」の検索結果", len(hits), "人"), unsafe_allow_html=True)
         if hits:
@@ -1079,7 +1171,14 @@ def page_people() -> None:
             draw_grid(hits)
         else:
             st.warning(f"「{keyword}」に一致する人は登録されていません。")
-            st.caption(f"※ 新しく登録する機能は{NOT_BUILT}。")
+            # 探して見つからなかった直後が、登録したい瞬間である。
+            # ここで左のボタンまで目を戻させると、探した言葉を打ち直すことになる。
+            if st.button(f"「{keyword}」を社員として登録する",
+                         key="btn-register-from-search-person"):
+                st.session_state["registering"] = "person"
+                st.session_state["_prefill_name"] = keyword
+                st.session_state.pop("selected", None)
+                st.rerun()
     else:
         shown_clear = st.session_state.get("scope") == "全員"
 
@@ -1089,7 +1188,8 @@ def page_people() -> None:
             if not items:
                 continue
             any_shown = True
-            st.markdown(ui.section(label, len(items), "人"), unsafe_allow_html=True)
+            st.markdown(ui.section(fill_days(label), len(items), "人"),
+                        unsafe_allow_html=True)
             draw_grid(items)
 
         if shown_clear and clear:
@@ -1143,8 +1243,10 @@ def page_assets() -> None:
 
     tiles = st.columns(len(SECTIONS) + 1)
     for (key, label, note), slot in zip(SECTIONS, tiles):
-        slot.markdown(ui.tile(pill_key(key, True), len(by_status[key]), note, "件"),
-                      unsafe_allow_html=True)
+        slot.markdown(
+            ui.tile(pill_key(key, True), len(by_status[key]), fill_days(note), "件"),
+            unsafe_allow_html=True,
+        )
     tiles[-1].markdown(
         ui.tile("ok", len(clear), "期限切れ・期限間近はありません", "件"),
         unsafe_allow_html=True,
@@ -1184,7 +1286,12 @@ def page_assets() -> None:
             draw_grid(hits)
         else:
             st.warning(f"「{keyword}」に一致する道具・機器は登録されていません。")
-            st.caption(f"※ 新しく登録する機能は{NOT_BUILT}。")
+            if st.button(f"「{keyword}」を道具・機器として登録する",
+                         key="btn-register-from-search-asset"):
+                st.session_state["registering"] = "asset"
+                st.session_state["_prefill_name"] = keyword
+                st.session_state.pop("selected", None)
+                st.rerun()
     else:
         shown_clear = st.session_state.get("scope-asset") == "すべて"
 
@@ -1195,8 +1302,12 @@ def page_assets() -> None:
                 continue
             any_shown = True
             # 「資格情報なし」は人の言い方。道具の画面では別の言葉にする。
-            shown_label = ui.STATE_STYLE[pill_key(key, True)][0] if key == "unregistered" else label
-            st.markdown(ui.section(shown_label, len(items), "件"), unsafe_allow_html=True)
+            shown = (
+                ui.STATE_STYLE[pill_key(key, True)][0]
+                if key == "unregistered"
+                else fill_days(label)
+            )
+            st.markdown(ui.section(shown, len(items), "件"), unsafe_allow_html=True)
             draw_grid(items)
 
         if shown_clear and clear:
@@ -1225,12 +1336,14 @@ def draw_issue_group(rows: list[Row]) -> None:
     """引っかかる項目を人ごとにまとめて出す。作業員名簿が人単位で作られるため。"""
     by_person: dict[str, list[Row]] = {}
     for row in rows:
-        by_person.setdefault(row.subject.name, []).append(row)
+        # 名前をキーにすると、同姓同名や同名の道具が同じ箱に混ざる。
+        by_person.setdefault(row.subject.id, []).append(row)
 
-    for name, items in by_person.items():
+    for items in by_person.values():
         head = items[0].subject
+        label = f"{head.name}（{head.code}）" if head.code else head.name
         with st.container(border=True):
-            st.markdown(f"**{name}**　:gray[{head.site} ／ {head.role}]")
+            st.markdown(f"**{label}**　:gray[{head.site} ／ {head.role}]")
             for row in items:
                 st.write(f"　・{row.requirement.name}：{reason_text(row)}")
 
@@ -1258,7 +1371,11 @@ def page_submission() -> None:
 
     people = [s for s in lg.subjects if s.kind == "person"]
     assets = [s for s in lg.subjects if s.kind == "asset"]
-    person_by_name = {s.name: s.id for s in people}
+    # 同姓同名がいると名前だけでは選べない。社員番号を添えて必ず一意にする。
+    person_by_name = {
+        (f"{s.name}（{s.code}）" if s.code else f"{s.name}（{s.id}）"): s.id
+        for s in people
+    }
     asset_by_name = {f"{s.name}（{s.code}）": s.id for s in assets}
 
     with target:
@@ -1312,8 +1429,13 @@ def page_submission() -> None:
 
     if not issues and not blank:
         st.success(
-            f"{jp_date(target_date)} に提出しても、引っかかる項目はありません。",
+            f"{jp_date(target_date)} 時点で、登録されている情報の中に"
+            "書類を止める項目はありません。",
             icon="✅",
+        )
+        st.caption(
+            "※ 台帳に登録されていない資格については判定できません。"
+            "職種ごとに必要な資格が揃っているかの確認は、この画面では行いません。"
         )
         return
 
@@ -1468,6 +1590,52 @@ def page_types() -> None:
         icon="ℹ️",
     )
 
+    # --- 拠点と職種 -------------------------------------------------------
+    #
+    # 登録済みの社員から数え上げるだけにすると、その拠点の最後の1人を
+    # 消した時点で拠点そのものが選択肢から消え、次の人を登録できなくなる。
+    # 事業所は人がいなくても存在するので、ここで持つ。
+    st.divider()
+    st.markdown("#### 拠点・職種")
+    if _flash:
+        st.success(_flash, icon="✅")
+    st.caption(
+        "登録画面で選べる一覧です。ここに無い拠点や職種は選べません。"
+        "人が1人もいない拠点も、消さずに残ります。"
+    )
+
+    for master_label, unit, key, current, add in (
+        ("拠点", "拠点", "site", lg.sites, lg.add_site),
+        ("職種（社員）", "職種", "role-person", lg.roles("person"),
+         lambda name: lg.add_role(name, "person")),
+        ("種別（道具・機器）", "種別", "role-asset", lg.roles("asset"),
+         lambda name: lg.add_role(name, "asset")),
+    ):
+        with st.container(border=True):
+            st.markdown(f"**{master_label}**　{len(current)}件")
+            st.caption("／".join(current) if current else "まだありません")
+
+            col_input, col_button = st.columns([3, 1], vertical_alignment="bottom")
+            with col_input:
+                name = st.text_input(
+                    f"追加する{unit}", key=f"master-input-{key}",
+                    placeholder=f"例）{current[0] if current else ''}",
+                    label_visibility="collapsed",
+                )
+            with col_button:
+                added = st.button("追加", key=f"master-add-{key}", width="stretch")
+
+            if added:
+                try:
+                    add(name)
+                except LedgerDataError as e:
+                    # 失敗したときは作り直さない。作り直すと、
+                    # 打った内容ごと消えたうえで理由も出ない。
+                    st.error(str(e), icon="⚠️")
+                else:
+                    st.session_state["_flash"] = f"{unit}「{name.strip()}」を追加しました。"
+                    st.rerun()
+
 
 # --- 社員の登録 -----------------------------------------------------------
 
@@ -1524,7 +1692,7 @@ def page_register_person() -> None:
         st.rerun()
 
     sites = lg.sites or ["本社"]
-    roles = sorted({s.role for s in lg.subjects if s.kind == "person" and s.role})
+    roles = lg.roles("person")
 
     with st.container(border=True):
         name = st.text_input(
@@ -1592,7 +1760,9 @@ def page_register_person() -> None:
                 for p in problems:
                     st.error(p, icon="⚠️")
             else:
-                new_id = f"p-new-{len(lg.subjects) + 1:04d}"
+                # 件数から作ると、削除したあとに既存IDと衝突する。
+                # 内部IDは社員番号とは別物なので、衝突しない値を使う。
+                new_id = f"p-{uuid.uuid4().hex[:12]}"
                 lg.subjects.append(
                     Subject(
                         id=new_id,
@@ -1681,7 +1851,7 @@ def page_register_asset() -> None:
         st.rerun()
 
     sites = lg.sites or ["本社"]
-    kinds = sorted({s.role for s in lg.subjects if s.kind == "asset" and s.role})
+    kinds = lg.roles("asset")
 
     with st.container(border=True):
         name = st.text_input(
@@ -1750,7 +1920,7 @@ def page_register_asset() -> None:
                 for p in problems:
                     st.error(p, icon="⚠️")
             else:
-                new_id = f"a-new-{len(lg.subjects) + 1:04d}"
+                new_id = f"a-{uuid.uuid4().hex[:12]}"
                 lg.subjects.append(
                     Subject(
                         id=new_id,
@@ -1809,7 +1979,7 @@ def page_edit_subject() -> None:
         st.rerun()
 
     sites = lg.sites or ["本社"]
-    kinds = sorted({s.role for s in lg.subjects if s.kind == subject.kind and s.role})
+    kinds = lg.roles(subject.kind)
     if subject.role and subject.role not in kinds:
         kinds.append(subject.role)
 

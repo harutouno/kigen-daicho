@@ -24,6 +24,7 @@ from dataclasses import dataclass, field
 from datetime import date, timedelta
 
 from core.models import Ledger, Subject
+from core.schedule import add_months
 from core.review import (
     Row,
     build_rows,
@@ -69,17 +70,30 @@ def _has(text: str, *words: str) -> bool:
     return any(w in text for w in words)
 
 
+def _looks_like_year_less_date(text: str) -> bool:
+    """「8月1日」のように、年の無い日付が書かれているか。"""
+    if re.search(r"\d{4}\s*年", text):
+        return False
+    return bool(re.search(r"\d{1,2}\s*月\s*\d{1,2}\s*日", text))
+
+
 def _parse_date(text: str, today: date) -> date | None:
-    """文中の日付を拾う。拾えなければ None（推測しない）。"""
+    """文中の日付を拾う。拾えなければ None。
+
+    年の無い日付から年を補わない。「8月1日」が今年なのか来年なのかは
+    書いた人にしか分からず、外すと提出日を1年ずらして判定することになる。
+
+    「Nか月後」は add_months で数える。台帳の周期計算が月単位で月末を
+    クランプしているのに、ここだけ30日で数えると、同じ「1か月」が
+    画面と AI で違う日を指すことになる。
+    """
     m = re.search(r"(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日", text)
     if m:
-        return date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
-
-    m = re.search(r"(\d{1,2})\s*月\s*(\d{1,2})\s*日", text)
-    if m:
-        month, day = int(m.group(1)), int(m.group(2))
-        year = today.year if month >= today.month else today.year + 1
-        return date(year, month, day)
+        try:
+            return date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        except ValueError:
+            # 2026年2月30日 のような日付。落とさず「拾えなかった」として扱う。
+            return None
 
     m = re.search(r"(\d{1,3})\s*日後", text)
     if m:
@@ -87,7 +101,7 @@ def _parse_date(text: str, today: date) -> date | None:
 
     m = re.search(r"(\d{1,2})\s*(?:か月|ヶ月|カ月)後", text)
     if m:
-        return today + timedelta(days=int(m.group(1)) * 30)
+        return add_months(today, int(m.group(1)))
 
     return None
 
@@ -214,6 +228,16 @@ def answer(
 
     # --- 照会系：台帳に聞く ---------------------------------------------
     # 答えはすべて台帳の関数から作る。文章を組み立てない。
+
+    if _looks_like_year_less_date(text) and _has(text, "提出", "工期", "出す", "出したら"):
+        return Answer(
+            kind="unknown",
+            headline="年が分からないので、判定できません。",
+            lines=[
+                "「2027年3月31日」のように、年を付けて入力してください。",
+                "年を推測すると、提出日を1年ずらして判定してしまうためです。",
+            ],
+        )
 
     target_date = _parse_date(text, today)
     if target_date is not None and _has(text, "提出", "工期", "出す", "出したら"):

@@ -1,0 +1,6 @@
+# テストを動かすために追加で要るもの。
+# 本番（Streamlit Cloud）では requirements.txt しか読まれないので、
+# ここに入れたものはデプロイされるアプリには含まれない。
+-r requirements.txt
+
+pytest>=8.0

@@ -168,7 +168,12 @@ def test_期日が未確定な場合も配置できないとする():
 
 
 def test_期限を持たない種別は書類を止めない():
-    """免状のように期限が無いものを、未確定として警告に混ぜない。"""
+    """免状のように期限が無いものを、未確定として警告に混ぜない。
+
+    以前は core も unknown を返しており、画面側だけで補正していた。
+    そのため summarize() では「本当に日付が無いもの」と混ざって数えられた。
+    判定の側で別の状態にしてある。
+    """
     ledger = make_ledger()
     ledger.holdings.append(
         Holding(id="h1", subject_id="p1", requirement_id="menjo", records=[])
@@ -176,9 +181,21 @@ def test_期限を持たない種別は書類を止めない():
 
     rows = build_rows(ledger, TODAY)
     assert len(rows) == 1
-    assert rows[0].status == "unknown"
+    assert rows[0].status == "no_deadline"
     assert rows[0].blocks_assignment is False
     assert submission_check(ledger, target_date=TODAY) == []
+
+
+def test_期限なしと日付未入力を別々に数える():
+    """集計で混ざると、把握できていない件数が水増しされる。"""
+    ledger = make_ledger()
+    ledger.holdings += [
+        Holding(id="h1", subject_id="p1", requirement_id="menjo", records=[]),
+        Holding(id="h2", subject_id="p1", requirement_id="kenshin", records=[]),
+    ]
+    counts = summarize(build_rows(ledger, TODAY))
+    assert counts["no_deadline"] == 1
+    assert counts["unknown"] == 1
 
 
 def test_期日未確定の行が先頭に並ぶ():
@@ -529,3 +546,54 @@ def test_記録が無い対象を選んだ人だけに絞れる():
     lg.holdings = []
 
     assert [s.name for s in unrecorded_subjects(lg, subject_ids=["p2"])] == ["新入B"]
+
+
+# --- 基準日より後の実施記録を混ぜない -------------------------------------
+
+
+def test_基準日より後の実施記録を過去の判定に使わない():
+    """この台帳の芯にあたる不変条件。
+
+    「任意の基準日で判定できる」と言いながら、基準日より後の実施記録を
+    根拠にしていたら、過去の状態を再現できていないことになる。
+    """
+    lg = make_ledger()
+    lg.subjects = [Subject(id="p1", name="甲", kind="person")]
+    lg.holdings = [
+        Holding(id="h1", subject_id="p1", requirement_id="kenshin",
+                records=[Record(done_on=date(2025, 1, 1)),
+                         Record(done_on=date(2026, 1, 1))]),
+    ]
+
+    # 2025-06-01 時点では、2026-01-01 の実施はまだ起きていない。
+    row = build_rows(lg, date(2025, 6, 1))[0]
+    assert row.due_on == date(2026, 1, 1)
+
+    # 2026-06-01 時点では両方起きているので、新しい方が使われる。
+    row = build_rows(lg, date(2026, 6, 1))[0]
+    assert row.due_on == date(2027, 1, 1)
+
+
+def test_基準日を戻すと周期型の状態も戻る():
+    """固定期限型だけでなく、周期型でも過去の状態を再現できること。"""
+    lg = make_ledger()
+    lg.subjects = [Subject(id="p1", name="甲", kind="person")]
+    lg.holdings = [
+        Holding(id="h1", subject_id="p1", requirement_id="kenshin",
+                records=[Record(done_on=date(2024, 1, 1)),
+                         Record(done_on=date(2026, 8, 1))]),
+    ]
+
+    # 2025-06-01 時点：前回は 2024-01-01、期限 2025-01-01 → 超過している
+    assert build_rows(lg, date(2025, 6, 1))[0].status == "overdue"
+    # 2026-08-30 時点：前回は 2026-08-01、期限 2027-08-01 → 問題なし
+    assert build_rows(lg, date(2026, 8, 30))[0].status == "ok"
+
+
+def test_記録全体の最新日は表示のために残してある():
+    """判定には使わないが、画面には「前回いつやったか」を出す必要がある。"""
+    h = Holding(id="h1", subject_id="p1", requirement_id="kenshin",
+                records=[Record(done_on=date(2025, 1, 1)),
+                         Record(done_on=date(2026, 1, 1))])
+    assert h.last_done_on == date(2026, 1, 1)
+    assert h.last_done_on_at(date(2025, 6, 1)) == date(2025, 1, 1)

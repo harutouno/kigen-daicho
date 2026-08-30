@@ -17,6 +17,7 @@ from datetime import date
 
 from core.models import Holding, Ledger, Requirement, Subject
 from core.schedule import (
+    NO_DEADLINE,
     OVERDUE,
     UNKNOWN,
     Status,
@@ -55,6 +56,8 @@ STATUS_ORDER: dict[str, int] = {
     "due_soon": 3,
     "upcoming": 4,
     "ok": 5,
+    # 期限が存在しないものは、危ない順のどこにも入らない。最後に置く。
+    NO_DEADLINE: 6,
 }
 
 
@@ -76,7 +79,8 @@ class Row:
         期限切れだけでなく、期日が確定していない場合も通さない。
         「分からない」を「大丈夫」として扱わないため。
         """
-        return self.status in (OVERDUE, UNKNOWN) and self.requirement.has_deadline
+        # 期限が存在しない種別は no_deadline になるので、ここで弾く必要はない。
+        return self.status in (OVERDUE, UNKNOWN)
 
 
 def build_rows(ledger: Ledger, as_of: date) -> list[Row]:
@@ -96,14 +100,21 @@ def build_rows(ledger: Ledger, as_of: date) -> list[Row]:
                 f"subject={holding.subject_id} requirement={holding.requirement_id}"
             )
 
-        due = holding.due_on(requirement)
+        due = holding.due_on(requirement, as_of)
+        # 期限が存在しない種別を「未確定」にしない。分かっていないのではなく、
+        # そもそも期限が無い。混ぜると、本当に日付が入っていない行が埋もれる。
+        status = (
+            NO_DEADLINE
+            if not requirement.has_deadline
+            else status_of(due, as_of, thresholds)
+        )
         rows.append(
             Row(
                 subject=subject,
                 requirement=requirement,
                 holding=holding,
                 due_on=due,
-                status=status_of(due, as_of, thresholds),
+                status=status,
                 days_left=days_left(due, as_of),
             )
         )
@@ -302,6 +313,7 @@ def summarize(rows: list[Row]) -> dict[Status, int]:
         "upcoming": 0,
         "ok": 0,
         "unknown": 0,
+        "no_deadline": 0,
     }
     for row in rows:
         counts[row.status] += 1

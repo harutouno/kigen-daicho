@@ -28,6 +28,7 @@ __all__ = [
     "next_due",
     "days_left",
     "status_of",
+    "NO_DEADLINE",
 ]
 
 
@@ -35,13 +36,17 @@ class ScheduleError(ValueError):
     """期限計算に渡された値が受け付けられないことを表す。"""
 
 
-Status = Literal["overdue", "due_soon", "upcoming", "ok", "unknown"]
+# 「期限が存在しない」と「期限は存在するが分かっていない」は別の状態。
+# 以前は両方 UNKNOWN にしていたため、画面では区別しているのに集計では
+# 混ざる、という食い違いが起きていた。判定の側で分ける。
+Status = Literal["overdue", "due_soon", "upcoming", "ok", "unknown", "no_deadline"]
 
 OVERDUE: Status = "overdue"
 DUE_SOON: Status = "due_soon"
 UPCOMING: Status = "upcoming"
 OK: Status = "ok"
 UNKNOWN: Status = "unknown"
+NO_DEADLINE: Status = "no_deadline"
 
 STATUS_LABEL: dict[Status, str] = {
     OVERDUE: "超過",
@@ -49,6 +54,7 @@ STATUS_LABEL: dict[Status, str] = {
     UPCOMING: "予告",
     OK: "余裕",
     UNKNOWN: "未確定",
+    NO_DEADLINE: "期限なし",
 }
 
 
@@ -89,9 +95,18 @@ def add_months(base: date, months: int) -> date:
     return date(year, month, min(base.day, last_day))
 
 
-def latest_done(done_dates: Iterable[date]) -> date | None:
-    """実施記録から前回実施日を導出する。記録が無ければ None。"""
-    dates = list(done_dates)
+def latest_done(done_dates: Iterable[date], as_of: date | None = None) -> date | None:
+    """実施記録から前回実施日を導出する。記録が無ければ None。
+
+    as_of を渡すと、その日までに実施されたものだけを見る。
+
+    これが要るのは、この台帳が「今日」以外の日でも判定するためである。
+    2025年6月時点の状態を出すときに、2026年1月の実施記録まで数えてしまうと、
+    その時点ではまだ起きていない実施を根拠に期限を延ばすことになる。
+    過去の状態を再現できなくなり、「任意の基準日で判定する」という
+    この台帳の芯が成り立たない。
+    """
+    dates = [d for d in done_dates if as_of is None or d <= as_of]
     return max(dates) if dates else None
 
 

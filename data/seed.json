@@ -2,6 +2,27 @@
   "generated_on": "2026-08-30",
   "soon_days": 30,
   "upcoming_days": 60,
+  "site_master": [
+    "本社",
+    "鹿屋支店",
+    "指宿支店",
+    "出水支店",
+    "枕崎支店",
+    "奄美支店"
+  ],
+  "role_master": {
+    "person": [
+      "施工管理",
+      "電気工事",
+      "保守・計装",
+      "事務"
+    ],
+    "asset": [
+      "絶縁用保護具",
+      "車両",
+      "測定機器"
+    ]
+  },
   "requirements": [
     {
       "id": "req-kanri-cert",

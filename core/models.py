@@ -18,6 +18,7 @@ from typing import Any, Literal
 from core.schedule import latest_done, next_due
 
 __all__ = [
+    "LedgerDataError",
     "Category",
     "DateMode",
     "Obligation",
@@ -52,12 +53,58 @@ DATE_MODE_LABEL: dict[str, str] = {
 }
 
 
+class LedgerDataError(ValueError):
+    """保存された台帳の内容が受け付けられないことを表す。
+
+    読み込みで気づかずに通すと、画面が壊れるのではなく判定が静かに狂う。
+    たとえば date_mode が知らない値だと、期限のある資格が
+    「期限なし」として扱われ、警告に出なくなる。
+    落ちる方がまだ安全なので、読み込みの時点で止める。
+    """
+
+
+def _require(d: dict[str, Any], key: str, where: str) -> Any:
+    if key not in d or d[key] in (None, ""):
+        raise LedgerDataError(f"{where}: 「{key}」がありません")
+    return d[key]
+
+
+def _one_of(value: Any, allowed: dict[str, str], key: str, where: str) -> Any:
+    """決められた区分値のどれかであることを確かめる。
+
+    許される値そのものではなく、画面で使っている対応表を引数に取る。
+    表に無い値は画面でも表示できないため、二重に管理しなくて済む。
+    """
+    if value not in allowed:
+        raise LedgerDataError(
+            f"{where}: 「{key}」に知らない値 {value!r} が入っています"
+            f"（使えるのは {'・'.join(allowed)}）"
+        )
+    return value
+
+
+def _merge(master: list[str], used: Any) -> list[str]:
+    """一覧を先に、一覧に無いものを後ろに。重複と空文字は落とす。
+
+    並べ直さないのは、一覧の順番が意味を持つため。本社を先頭に置いてある
+    ものを五十音で並べ替えると、毎回スクロールして探すことになる。
+    """
+    out = [s for s in master if s]
+    for s in used:
+        if s and s not in out:
+            out.append(s)
+    return out
+
+
 def _to_date(value: Any) -> date | None:
     if value in (None, ""):
         return None
     if isinstance(value, date):
         return value
-    return date.fromisoformat(str(value))
+    try:
+        return date.fromisoformat(str(value))
+    except ValueError as e:
+        raise LedgerDataError(f"日付として読めません: {value!r}") from e
 
 
 def _from_date(value: date | None) -> str | None:
@@ -87,13 +134,24 @@ class Requirement:
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> Requirement:
+        where = f"種類 {d.get('id', '?')!r}"
+        date_mode = _one_of(
+            d.get("date_mode", "cycle"), DATE_MODE_LABEL, "date_mode", where
+        )
+        cycle_months = d.get("cycle_months")
+        # 周期で計算すると書いてあるのに周期が無いと、期限を出せないまま
+        # 「未確定」が並ぶ。原因が台帳の中身にあると気づきにくいので、ここで言う。
+        if date_mode == "cycle" and not cycle_months:
+            raise LedgerDataError(f"{where}: 周期で計算する設定ですが cycle_months がありません")
         return cls(
-            id=d["id"],
-            name=d["name"],
-            category=d["category"],
-            obligation=d.get("obligation", "legal"),
-            date_mode=d.get("date_mode", "cycle"),
-            cycle_months=d.get("cycle_months"),
+            id=_require(d, "id", where),
+            name=_require(d, "name", where),
+            category=_one_of(_require(d, "category", where),
+                             CATEGORY_LABEL, "category", where),
+            obligation=_one_of(d.get("obligation", "legal"),
+                               OBLIGATION_LABEL, "obligation", where),
+            date_mode=date_mode,
+            cycle_months=cycle_months,
             source=d.get("source", ""),
             note=d.get("note", ""),
         )
@@ -216,8 +274,11 @@ class Record:
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> Record:
-        done_on = _to_date(d["done_on"])
-        assert done_on is not None
+        # assert は python -O で消える。消えたら None のまま通り、
+        # 期限計算の途中で分かりにくい形で落ちる。例外として明示する。
+        done_on = _to_date(d.get("done_on"))
+        if done_on is None:
+            raise LedgerDataError("実施記録に実施日がありません")
         return cls(
             done_on=done_on,
             done_by=d.get("done_by", ""),
@@ -246,19 +307,40 @@ class Holding:
     subject_id: str
     requirement_id: str
     fixed_due_on: date | None = None
-    records: list[Record] = field(default_factory=list)
+    # タプルで持つ。「追記のみ」を決まりごとで守らせるのではなく、型で守らせる。
+    # リストのままだと holding.records.clear() ができてしまい、
+    # 「消せない」と書いてあるのに消せる、という状態になる。
+    records: tuple[Record, ...] = ()
     note: str = ""
     # 受講や点検の予約が取れている場合の予定日。期日の計算には使わない。
     # 「切れているが予約済み」と「切れていて何もしていない」は、対応が違うため
     # 区別できるようにする。予定を実績として扱うと超過が隠れるので、判定には混ぜない。
     planned_on: date | None = None
 
+    def __post_init__(self) -> None:
+        # 読み込みや呼び出し側はリストで渡してくるので、ここで揃える。
+        if not isinstance(self.records, tuple):
+            self.records = tuple(self.records)
+
     @property
     def last_done_on(self) -> date | None:
+        """記録全体の中で最も新しい実施日。表示にだけ使う。
+
+        判定には使わない。判定は基準日を伴うので last_done_on_at を使うこと。
+        """
         return latest_done(r.done_on for r in self.records)
 
-    def due_on(self, requirement: Requirement) -> date | None:
-        """次回期日。決められない場合は None を返し、推測で埋めない。"""
+    def last_done_on_at(self, as_of: date) -> date | None:
+        """基準日までに実施されたものだけを見た、前回実施日。"""
+        return latest_done((r.done_on for r in self.records), as_of=as_of)
+
+    def due_on(self, requirement: Requirement, as_of: date) -> date | None:
+        """次回期日。決められない場合は None を返し、推測で埋めない。
+
+        as_of を必ず受け取る。既定値を持たせると、呼び出し側が「いつ時点の
+        話か」を書かずに済んでしまい、未来の実施記録を過去の判定に混ぜる
+        事故が起きる。
+        """
         if requirement.date_mode == "none":
             return None
         if requirement.date_mode == "fixed":
@@ -266,12 +348,17 @@ class Holding:
                 last_done_on=None, cycle_months=None, fixed_due_on=self.fixed_due_on
             )
         return next_due(
-            last_done_on=self.last_done_on,
+            last_done_on=self.last_done_on_at(as_of),
             cycle_months=requirement.cycle_months,
         )
 
     def add_record(self, record: Record) -> None:
-        self.records.append(record)
+        """記録を足す。消す手段は用意しない。
+
+        過去を書き換えられる台帳は、監査のときに信用されない。
+        間違えた場合は、正しい日付でもう一度記録する。
+        """
+        self.records = (*self.records, record)
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> Holding:
@@ -280,7 +367,7 @@ class Holding:
             subject_id=d["subject_id"],
             requirement_id=d["requirement_id"],
             fixed_due_on=_to_date(d.get("fixed_due_on")),
-            records=[Record.from_dict(r) for r in d.get("records", [])],
+            records=tuple(Record.from_dict(r) for r in d.get("records", [])),
             note=d.get("note", ""),
             planned_on=_to_date(d.get("planned_on")),
         )
@@ -307,6 +394,15 @@ class Ledger:
     soon_days: int = 30
     upcoming_days: int = 60
 
+    # 拠点と職種は、登録済みの社員から数え上げるだけでは足りない。
+    # 数え上げだけだと、その拠点の最後の1人を消した時点で拠点そのものが
+    # 選択肢から消え、次の人を登録できなくなる。事業所は人がいなくても
+    # 存在するものなので、台帳が持つ一覧として別に持つ。
+    site_master: list[str] = field(default_factory=list)
+    # 人の職種と道具の種別は別物なので、一つの一覧に混ぜない。
+    # 混ぜると、社員の登録画面の職種欄に「絶縁用保護具」が出る。
+    role_master: dict[str, list[str]] = field(default_factory=dict)
+
     def set_soon_days(self, days: int) -> None:
         """『期限間近』とする日数を変える。
 
@@ -330,7 +426,35 @@ class Ledger:
 
     @property
     def sites(self) -> list[str]:
-        return sorted({s.site for s in self.subjects if s.site})
+        """選べる拠点。一覧に載っているものと、実際に使われているものの両方。
+
+        一覧だけにすると、一覧に無い拠点の社員が編集画面で別の拠点に
+        すり替わる。実際に使われている値は必ず選べるようにする。
+        """
+        return _merge(self.site_master, (s.site for s in self.subjects))
+
+    def roles(self, kind: str) -> list[str]:
+        """選べる職種（道具の場合は種別）。"""
+        return _merge(
+            self.role_master.get(kind, []),
+            (s.role for s in self.subjects if s.kind == kind),
+        )
+
+    def add_site(self, name: str) -> None:
+        """拠点を一覧に加える。人がいなくても残る。"""
+        name = name.strip()
+        if not name:
+            raise LedgerDataError("拠点の名前を入力してください")
+        if name not in self.site_master:
+            self.site_master.append(name)
+
+    def add_role(self, name: str, kind: str) -> None:
+        name = name.strip()
+        if not name:
+            raise LedgerDataError("職種の名前を入力してください")
+        names = self.role_master.setdefault(kind, [])
+        if name not in names:
+            names.append(name)
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> Ledger:
@@ -340,6 +464,8 @@ class Ledger:
             holdings=[Holding.from_dict(x) for x in d.get("holdings", [])],
             soon_days=d.get("soon_days", 30),
             upcoming_days=d.get("upcoming_days", 60),
+            site_master=list(d.get("site_master", [])),
+            role_master={k: list(v) for k, v in d.get("role_master", {}).items()},
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -349,4 +475,6 @@ class Ledger:
             "holdings": [h.to_dict() for h in self.holdings],
             "soon_days": self.soon_days,
             "upcoming_days": self.upcoming_days,
+            "site_master": self.site_master,
+            "role_master": self.role_master,
         }

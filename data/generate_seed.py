@@ -382,6 +382,16 @@ def build() -> dict:
         "generated_on": iso(TODAY),
         "soon_days": 30,
         "upcoming_days": 60,
+        # 事業所と職種は人がいなくても存在する。数え上げに任せると、
+        # その拠点の最後の1人を消した時点で選択肢ごと消える。
+        "site_master": SITES,
+        # 道具の種別は add_asset に直接渡しているので、使われた順に拾う。
+        "role_master": {
+            "person": ROLES,
+            "asset": list(dict.fromkeys(
+                s["role"] for s in subjects if s["kind"] == "asset" and s.get("role")
+            )),
+        },
         "requirements": requirements,
         "subjects": subjects,
         "holdings": holdings,
