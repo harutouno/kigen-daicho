@@ -305,12 +305,13 @@ def draw_detail(kind: str) -> None:
         st.session_state.pop("selected", None)
         st.session_state.pop("selected_holding", None)
         st.rerun()
-    edit.button(
+    if edit.button(
         "この道具の情報を編集する" if is_asset else "この人の情報を編集する",
         key="btn-edit-subject",
         width="stretch",
-        disabled=True,
-    )
+    ):
+        st.session_state["editing"] = selected.id
+        st.rerun()
 
     if _flash:
         st.success(_flash, icon="✅")
@@ -1362,13 +1363,15 @@ def next_employee_code(prefix: str = "E-") -> str:
     return f"{prefix}{used + 1:04d}"
 
 
-def code_is_taken(code: str) -> Subject | None:
+def code_is_taken(code: str, exclude_id: str | None = None) -> Subject | None:
     """同じ社員番号を持つ人がいれば返す。
 
     重複したまま登録すると、一覧でどちらの話をしているのか分からなくなる。
     手で押す確認ボタンは置かず、登録のときに必ず通す。
     """
     for s in lg.subjects:
+        if s.id == exclude_id:
+            continue
         if s.kind == "person" and s.code and s.code == code:
             return s
     return None
@@ -1474,6 +1477,7 @@ def page_register_person() -> None:
                         role=role,
                         code=wanted,
                         kana=kana.strip(),
+                        note=note.strip(),
                     )
                 )
                 for k in ("reg-name", "reg-kana", "reg-code", "reg-note"):
@@ -1516,13 +1520,15 @@ def next_asset_code(prefix: str = "M-") -> str:
     return f"{prefix}{used + 1:04d}"
 
 
-def asset_code_is_taken(code: str) -> Subject | None:
+def asset_code_is_taken(code: str, exclude_id: str | None = None) -> Subject | None:
     """同じ管理番号の道具がいれば返す。
 
     道具は名前では特定できないため、管理番号が重複すると現物にたどり着けなくなる。
     人の社員番号より影響が大きい。
     """
     for s in lg.subjects:
+        if s.id == exclude_id:
+            continue
         if s.kind == "asset" and s.code and s.code == code:
             return s
     return None
@@ -1629,6 +1635,7 @@ def page_register_asset() -> None:
                         role=role,
                         code=wanted,
                         model=model.strip(),
+                        note=note.strip(),
                     )
                 )
                 for k in ("reg-a-name", "reg-a-code", "reg-a-model", "reg-a-note"):
@@ -1651,9 +1658,139 @@ def page_register_asset() -> None:
             st.caption(body)
 
 
+# --- 登録内容の編集 ---------------------------------------------------------
+
+
+def page_edit_subject() -> None:
+    """登録した内容を直す。登録画面とほぼ同じ形にして、迷わせない。
+
+    登録できて直せないと、名前の打ち間違いや異動があったときに手が出せなくなる。
+    記録（実施・点検）はここでは触らない。あれは追記のみで書き換えないものなので、
+    直す対象は対象そのものの属性だけにしている。
+    """
+    subject = lg.subject(st.session_state["editing"])
+    if subject is None:
+        st.session_state.pop("editing", None)
+        st.rerun()
+        return
+
+    is_asset = subject.kind == "asset"
+
+    st.title("道具・機器の情報を直す" if is_asset else "社員の情報を直す")
+    st.caption("登録済みの内容を書き換えます。※ は必須項目です。")
+
+    if st.button("← やめて戻る", key="btn-edit-back"):
+        st.session_state.pop("editing", None)
+        st.rerun()
+
+    sites = lg.sites or ["本社"]
+    kinds = sorted({s.role for s in lg.subjects if s.kind == subject.kind and s.role})
+    if subject.role and subject.role not in kinds:
+        kinds.append(subject.role)
+
+    with st.container(border=True):
+        if is_asset:
+            name = st.text_input("名称　※", value=subject.name, key="ed-name")
+            code = st.text_input("管理番号", value=subject.code, key="ed-code")
+            st.caption("現物に貼っている番号です。空欄にはできますが、推奨しません。")
+            model = st.text_input("型番", value=subject.model, key="ed-model")
+            kana = ""
+        else:
+            name = st.text_input("氏名　※", value=subject.name, key="ed-name")
+            st.caption("姓と名の間にスペースを入れてください。")
+            kana = st.text_input("ふりがな　※", value=subject.kana, key="ed-kana")
+            code = st.text_input("社員番号", value=subject.code, key="ed-code")
+            model = ""
+
+        st.caption("同じ番号がすでに使われている場合は、保存のときにお知らせします。")
+
+        st.markdown("**保管場所　※**" if is_asset else "**所属（拠点）　※**")
+        site = st.radio(
+            "所属",
+            sites,
+            index=sites.index(subject.site) if subject.site in sites else 0,
+            horizontal=True,
+            label_visibility="collapsed",
+            key="ed-site",
+        )
+
+        st.markdown("**種類　※**" if is_asset else "**職種　※**")
+        role = st.radio(
+            "職種",
+            kinds,
+            index=kinds.index(subject.role) if subject.role in kinds else 0,
+            horizontal=True,
+            label_visibility="collapsed",
+            key="ed-role",
+        )
+
+        note = st.text_area(
+            "備考（任意）", value=subject.note, max_chars=200, key="ed-note"
+        )
+
+        left, right = st.columns([1, 2])
+        if left.button("やめる", width="stretch", key="btn-edit-cancel"):
+            st.session_state.pop("editing", None)
+            st.rerun()
+
+        if right.button(
+            "保存する", type="primary", width="stretch", key="btn-edit-save"
+        ):
+            problems: list[str] = []
+            if not name.strip():
+                problems.append("名称を入力してください。" if is_asset
+                                else "氏名を入力してください。")
+            if not is_asset and not kana.strip():
+                problems.append("ふりがなを入力してください。")
+
+            wanted = code.strip()
+            if wanted:
+                # 自分自身は重複とみなさない。番号を変えずに保存できるようにする。
+                taken = (
+                    asset_code_is_taken(wanted, exclude_id=subject.id)
+                    if is_asset
+                    else code_is_taken(wanted, exclude_id=subject.id)
+                )
+                if taken is not None:
+                    label = "管理番号" if is_asset else "社員番号"
+                    problems.append(
+                        f"{label} {wanted} は「{taken.name}」が使っています。"
+                        "別の番号を入力してください。"
+                    )
+
+            if problems:
+                for p in problems:
+                    st.error(p, icon="⚠️")
+            else:
+                index = lg.subjects.index(subject)
+                lg.subjects[index] = replace(
+                    subject,
+                    name=name.strip(),
+                    kana=kana.strip(),
+                    code=wanted,
+                    model=model.strip(),
+                    site=site,
+                    role=role,
+                    note=note.strip(),
+                )
+                for k in ("ed-name", "ed-kana", "ed-code", "ed-model", "ed-note"):
+                    st.session_state.pop(k, None)
+                st.session_state.pop("editing", None)
+                st.session_state["_flash"] = f"「{name.strip()}」の情報を保存しました。"
+                st.rerun()
+
+    st.caption(
+        "※ 資格・講習・健診や点検の記録は、ここでは変わりません。"
+        "記録は追記のみで書き換えない決まりのため、"
+        "直したい場合はその記録の画面から新しく追加してください。"
+    )
+
+
 # --- 振り分け -------------------------------------------------------------
 
-if nav == PAGE_PEOPLE and st.session_state.get("registering") == "person":
+if st.session_state.get("editing"):
+    page_edit_subject()
+elif nav == PAGE_PEOPLE and st.session_state.get("registering") == "person":
     page_register_person()
 elif nav == PAGE_PEOPLE:
     page_people()

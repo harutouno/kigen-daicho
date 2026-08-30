@@ -127,6 +127,7 @@ class Subject:
     code: str = ""      # 社員は社員番号、道具は管理番号
     model: str = ""     # 道具の型番
     kana: str = ""      # 社員のふりがな
+    note: str = ""      # 備考
 
     @property
     def search_text(self) -> str:
@@ -148,6 +149,7 @@ class Subject:
             code=d.get("code", ""),
             model=d.get("model", ""),
             kana=d.get("kana", ""),
+            note=d.get("note", ""),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -160,6 +162,7 @@ class Subject:
             "code": self.code,
             "model": self.model,
             "kana": self.kana,
+            "note": self.note,
         }
 
 
