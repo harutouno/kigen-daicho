@@ -23,7 +23,7 @@ from pathlib import Path
 # リポジトリ直下がパスに入らないため、core を読めない。
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from core.schedule import business_today  # noqa: E402
+from core.schedule import business_today
 
 OUT = Path(__file__).resolve().parent / "seed.json"
 
@@ -99,7 +99,7 @@ def build() -> dict:
     #
     # それぞれ違う種類の問題を担当させ、画面で何が起きるかを一通り見せる。
 
-    named = [
+    named: list[dict] = [
         # 資格者証は有効なのに講習だけ切れている。片方だけ見ると通してしまう例。
         {
             "id": "p-001", "code": "E-0001", "kana": "さこだ かずき", "name": "迫田 和樹", "site": "本社", "role": "施工管理",

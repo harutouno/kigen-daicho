@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import UTC, date
 
 import pytest
 
@@ -24,7 +24,6 @@ from core.schedule import (
     status_of,
     validate_done_on,
 )
-
 
 # --- 月加算 ---------------------------------------------------------------
 
@@ -224,7 +223,7 @@ def test_実施を記録すると次回期日が立ち直す():
 def test_古い実施日を後から追加しても次回期日は後退しない():
     # 記録漏れを後から入力しても、最新の実施日が正本であり続けることを確認する。
     records = [date(2026, 8, 20)]
-    after_late_entry = records + [date(2025, 4, 10)]
+    after_late_entry = [*records, date(2025, 4, 10)]
 
     assert next_due(
         last_done_on=latest_done(after_late_entry), cycle_months=12
@@ -241,13 +240,13 @@ def test_業務上の今日は日本時間で決まる():
     期限当日を境界として厳密に扱っているので、1日のずれが
     そのまま「期限切れ」と「まだ有効」の差になる。
     """
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from core.schedule import BUSINESS_TZ, business_today
 
     # 日本時間 2026-08-31 00:30 は、協定世界時ではまだ 08-30 15:30
     jst_midnight = datetime(2026, 8, 31, 0, 30, tzinfo=BUSINESS_TZ)
-    assert jst_midnight.astimezone(timezone.utc).date() == date(2026, 8, 30)
+    assert jst_midnight.astimezone(UTC).date() == date(2026, 8, 30)
     assert jst_midnight.date() == date(2026, 8, 31)
 
     # 実際の呼び出しが日本時間の日付と一致すること

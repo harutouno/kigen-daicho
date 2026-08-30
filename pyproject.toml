@@ -1,0 +1,44 @@
+# 静的検査の設定。
+#
+# 人が読んで探すより、機械が確実に見つけられる範囲は機械に任せる。
+# 監査で見つかった不具合のうち、いくつかはこの層で捕まえられた種類だった。
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = ["__pycache__"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle
+    "F",    # pyflakes（未定義の名前、使われていない import など）
+    "W",    # 警告
+    "I",    # import の並び
+    "B",    # bugbear（間違えやすい書き方）
+    "UP",   # 古い書き方
+    "SIM",  # 単純にできる書き方
+    "RUF",  # ruff 固有
+]
+ignore = [
+    # 日本語のコメントと文字列を多用しているため、行長は目安として扱う。
+    "E501",
+    # ドメインの用語をそのまま関数名・変数名にしている（日本語のテスト名など）。
+    "RUF001", "RUF002", "RUF003",
+    # __all__ は「型 → 判定 → 補助」のように意味で並べている。
+    # 五十音順に直すと、読む側の手がかりが消える。
+    "RUF022",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# テストでは意図的に壊した値を渡す。
+"tests/*" = ["B011"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["core", "data", "ui.py", "app.py"]
+ignore_missing_imports = true
+# 段階的に厳しくする。まずは「型が食い違っている」ものだけを見る。
+check_untyped_defs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+no_implicit_optional = true

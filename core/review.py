@@ -344,7 +344,7 @@ def assignment_check(
     for row in build_rows(ledger, as_of):
         if row.subject.id != subject_id:
             continue
-        current = rows.get(row.requirement.id)
+        current: Row | None = rows.get(row.requirement.id)
         if current is None or STATUS_ORDER[row.status] < STATUS_ORDER[current.status]:
             rows[row.requirement.id] = row
 
@@ -353,15 +353,15 @@ def assignment_check(
         requirement = ledger.requirement(requirement_id)
         name = requirement.name if requirement else requirement_id
 
-        row = rows.get(requirement_id)
-        if row is None:
+        held = rows.get(requirement_id)
+        if held is None:
             reasons.append(f"{name}：台帳に登録がありません")
             continue
-        if row.status == UNKNOWN:
+        if held.status == UNKNOWN:
             reasons.append(f"{name}：期日が未確定です")
             continue
-        if row.status == OVERDUE:
-            reasons.append(f"{name}：{row.due_on} に超過しています")
+        if held.status == OVERDUE:
+            reasons.append(f"{name}：{held.due_on} に超過しています")
 
     return (not reasons, reasons)
 

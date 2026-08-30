@@ -19,14 +19,17 @@ from datetime import date
 
 import streamlit as st
 
+import ui
+from core.assistant import CAPABILITIES
+from core.assistant import answer as assistant_answer
 from core.models import (
-    LEDGER_BEGINNING,
-    LedgerDataError,
     CATEGORY_LABEL,
     DATE_MODE_LABEL,
+    LEDGER_BEGINNING,
     OBLIGATION_LABEL,
     Holding,
     Ledger,
+    LedgerDataError,
     Record,
     Requirement,
     Subject,
@@ -40,14 +43,9 @@ from core.review import (
     preflight_check,
     submission_check,
     summarize_by_subject,
-    unrecorded_subjects,
 )
-from core.assistant import CAPABILITIES
-from core.assistant import answer as assistant_answer
 from core.schedule import ScheduleError, add_months, business_today, validate_done_on
 from core.store import SEED_PATH, load_ledger
-
-import ui
 
 st.set_page_config(page_title="期限台帳", page_icon="📋", layout="wide")
 ui.inject()
@@ -273,7 +271,8 @@ def draw_card(summary: SubjectSummary, slot) -> None:
 def draw_grid(items: list[SubjectSummary]) -> None:
     for start in range(0, len(items), CARDS_PER_ROW):
         slots = st.columns(CARDS_PER_ROW)
-        for summary, slot in zip(items[start : start + CARDS_PER_ROW], slots):
+        # 最終行は枠の数より中身が少ない。余った枠は空のままにする。
+        for summary, slot in zip(items[start : start + CARDS_PER_ROW], slots, strict=False):
             draw_card(summary, slot)
 
 
@@ -421,10 +420,14 @@ def draw_delete_block(subject, is_asset: bool) -> None:
             st.rerun()
 
 
-def draw_detail(kind: str) -> None:
-    """選んだ 1 件の詳細。一覧とは別の画面として出す。"""
-    is_asset = kind == "asset"
-    selected = lg.subject(st.session_state["selected"])
+def draw_detail(selected: Subject) -> None:
+    """選んだ 1 件の詳細。一覧とは別の画面として出す。
+
+    対象は引数で受け取る。以前はここで session_state から引き直しており、
+    「呼ぶ側が存在を確かめている」という約束に頼っていた。約束は破れる。
+    呼ぶ側が確かめた結果をそのまま渡せば、無い対象で入ってくる余地がない。
+    """
+    is_asset = selected.kind == "asset"
 
     back, edit = st.columns([3, 1])
     if back.button(
@@ -469,7 +472,7 @@ def draw_detail(kind: str) -> None:
     with status:
         st.markdown("**この人の状況**" if not is_asset else "**この道具の状況**")
         tiles = st.columns(len(DETAIL_TILES))
-        for (key, style, note), slot in zip(DETAIL_TILES, tiles):
+        for (key, style, note), slot in zip(DETAIL_TILES, tiles, strict=True):
             slot.markdown(
                 ui.tile(style, counts[key], note, "件"), unsafe_allow_html=True
             )
@@ -506,8 +509,8 @@ def draw_detail(kind: str) -> None:
                 else "次回予定日：未入力"
             )
 
-    title, add = st.columns([3, 1])
-    title.markdown(
+    title_col, add = st.columns([3, 1])
+    title_col.markdown(
         "##### 資格・講習・健診の一覧" if not is_asset else "##### 点検・校正の一覧"
     )
     if add.button(
@@ -529,6 +532,7 @@ def draw_detail(kind: str) -> None:
     for slot, label in zip(
         header,
         ["種別", "名称", "状態", "期限／前回実施日", "残り日数・状況", "次回予定日", "記録"],
+        strict=True,
     ):
         slot.caption(f"**{label}**")
 
@@ -678,9 +682,9 @@ def next_actions(row: Row) -> list[str]:
     return ["いま対応は必要ありません。"]
 
 
-def draw_holding_detail(kind: str) -> None:
+def draw_holding_detail(selected: Subject) -> None:
     """1 件の資格・点検の詳細。人の詳細から名称を押して来る。"""
-    is_asset = kind == "asset"
+    is_asset = selected.kind == "asset"
     holding_id = st.session_state["selected_holding"]
 
     row = next(
@@ -789,6 +793,7 @@ def draw_holding_detail(kind: str) -> None:
              "受け取った日" if is_fixed else "実施日",
              "有効期限" if is_fixed else "この回による期限",
              "実施者", "備考", "添付", ""],
+            strict=True,
         ):
             slot.caption(f"**{label}**")
 
@@ -811,8 +816,9 @@ def draw_holding_detail(kind: str) -> None:
                 ("台帳に登録された時点" if from_start else jp_date(rec.done_on))
                 + ("（訂正済み）" if done else "")
             )
-            if rec.is_expiry_update:
-                cols[2].write(jp_date(rec.expiry_on))
+            expiry = rec.expiry_on
+            if expiry is not None:
+                cols[2].write(jp_date(expiry))
             elif req.date_mode == "cycle" and req.cycle_months:
                 cols[2].write(jp_date(add_months(rec.done_on, req.cycle_months)))
             else:
@@ -883,7 +889,9 @@ def draw_holding_detail(kind: str) -> None:
                 width="stretch",
                 key="btn-detail-renew",
             ):
-                if new_due == current:
+                if new_due is None or got_on is None:
+                    st.error("日付を入れてください。", icon="⚠️")
+                elif new_due == current:
                     st.info("いまの期限と同じです。変更はありません。")
                 else:
                     try:
@@ -996,7 +1004,7 @@ def draw_record_detail(holding, req, ordered: list) -> None:
         else:
             widths = [3, 1.2, 1.6, 1.2]
             header = st.columns(widths)
-            for slot, label in zip(header, ["ファイル名", "大きさ", "登録日", "登録者"]):
+            for slot, label in zip(header, ["ファイル名", "大きさ", "登録日", "登録者"], strict=True):
                 slot.caption(f"**{label}**")
             for att in target.attachments:
                 cols = st.columns(widths)
@@ -1194,7 +1202,7 @@ def draw_add_form(subject, rows: list[Row], is_asset: bool) -> None:
                     id=f"h-{uuid.uuid4().hex[:12]}",
                     subject_id=subject.id,
                     requirement_id=req.id,
-                    records=records,
+                    records=tuple(records),
                 )
             )
             st.session_state.pop("adding", None)
@@ -1247,9 +1255,9 @@ def page_people() -> None:
     selected = lg.subject(selected_id) if selected_id else None
     if selected is not None and selected.kind == "person":
         if st.session_state.get("selected_holding"):
-            draw_holding_detail("person")
+            draw_holding_detail(selected)
         else:
-            draw_detail("person")
+            draw_detail(selected)
         return
 
     summaries = summarize_by_subject(lg, today, kind="person")
@@ -1272,7 +1280,8 @@ def page_people() -> None:
     )
 
     tiles = st.columns(len(SECTIONS) + 1)
-    for (key, label, note), slot in zip(SECTIONS, tiles):
+    # 枠は 1 つ多い。最後は「問題なし」で、SECTIONS には入れていない。
+    for (key, _label, note), slot in zip(SECTIONS, tiles, strict=False):
         slot.markdown(ui.tile(key, len(by_status[key]), fill_days(note), "人"),
                       unsafe_allow_html=True)
     tiles[-1].markdown(
@@ -1350,8 +1359,8 @@ def page_people() -> None:
             st.success("対応が必要な人はいません。")
 
         if not shown_clear and clear:
-            note, action = st.columns([3, 1])
-            note.info(f"問題なしの人が{len(clear)}人います。「全員」を選ぶと表示できます。")
+            msg, action = st.columns([3, 1])
+            msg.info(f"問題なしの人が{len(clear)}人います。「全員」を選ぶと表示できます。")
             if action.button("全員を表示する", width="stretch", key="btn-show-all"):
                 st.session_state["_request_show_all"] = "scope"
                 st.rerun()
@@ -1366,9 +1375,9 @@ def page_assets() -> None:
     selected = lg.subject(selected_id) if selected_id else None
     if selected is not None and selected.kind == "asset":
         if st.session_state.get("selected_holding"):
-            draw_holding_detail("asset")
+            draw_holding_detail(selected)
         else:
-            draw_detail("asset")
+            draw_detail(selected)
         return
 
     summaries = summarize_by_subject(lg, today, kind="asset")
@@ -1391,7 +1400,8 @@ def page_assets() -> None:
     )
 
     tiles = st.columns(len(SECTIONS) + 1)
-    for (key, label, note), slot in zip(SECTIONS, tiles):
+    # 枠は 1 つ多い。最後は「問題なし」で、SECTIONS には入れていない。
+    for (key, _label, note), slot in zip(SECTIONS, tiles, strict=False):
         slot.markdown(
             ui.tile(pill_key(key, True), len(by_status[key]), fill_days(note), "件"),
             unsafe_allow_html=True,
@@ -1468,8 +1478,8 @@ def page_assets() -> None:
             st.success("対応が必要な道具・機器はありません。")
 
         if not shown_clear and clear:
-            note, action = st.columns([3, 1])
-            note.info(
+            msg, action = st.columns([3, 1])
+            msg.info(
                 f"問題なしの道具・機器が{len(clear)}件あります。"
                 "「すべて」を選ぶと表示できます。"
             )
@@ -1940,7 +1950,7 @@ def page_register_person() -> None:
 
     st.markdown("##### 登録したあとの流れ")
     steps = st.columns(len(REGISTER_STEPS))
-    for (state, title, body), slot in zip(REGISTER_STEPS, steps):
+    for (state, title, body), slot in zip(REGISTER_STEPS, steps, strict=True):
         with slot.container(border=True):
             st.markdown(ui.bar(state), unsafe_allow_html=True)
             st.markdown(f"**{title}**")
@@ -2098,7 +2108,7 @@ def page_register_asset() -> None:
 
     st.markdown("##### 登録したあとの流れ")
     steps = st.columns(len(REGISTER_ASSET_STEPS))
-    for (state, title, body), slot in zip(REGISTER_ASSET_STEPS, steps):
+    for (state, title, body), slot in zip(REGISTER_ASSET_STEPS, steps, strict=True):
         with slot.container(border=True):
             st.markdown(ui.bar(state), unsafe_allow_html=True)
             st.markdown(f"**{title}**")
@@ -2292,7 +2302,7 @@ def page_ai() -> None:
     normalizer = build_normalizer()
     try:
         result = assistant_answer(lg, question, today, normalizer=normalizer)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         # 外部への問い合わせが失敗しても、こちら側の判定は使える。
         # 黙って握り潰さず、失敗したことを見せたうえで従来どおり答える。
         st.warning(f"外部への問い合わせに失敗しました：{e}", icon="⚠️")
@@ -2333,7 +2343,7 @@ def page_ai() -> None:
                     unsafe_allow_html=True)
         widths = [1.6, 2.2, 1.3, 1.8]
         header = st.columns(widths)
-        for slot, label in zip(header, ["対象", "種類", "状態", "期限・状況"]):
+        for slot, label in zip(header, ["対象", "種類", "状態", "期限・状況"], strict=True):
             slot.caption(f"**{label}**")
         for row in result.rows[:30]:
             cols = st.columns(widths)

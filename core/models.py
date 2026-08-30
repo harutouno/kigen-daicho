@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 from datetime import date
-from typing import Any, Iterable, Literal
+from typing import Any, Literal
 from uuid import uuid4
 
 from core.schedule import latest_done, next_due
@@ -599,8 +599,8 @@ def _checked_records(records: list[Record], *, where: str) -> tuple[Record, ...]
     # 実測で、そのまま読み込めて履歴が空になることを確認している。
     by_id = {r.id: r for r in records}
     for start in records:
-        seen = set()
-        cur = start
+        seen: set[str] = set()
+        cur: Record | None = start
         while cur is not None and cur.supersedes:
             if cur.id in seen:
                 raise LedgerDataError(f"{where}: 訂正が循環しています（{cur.id}）")

@@ -31,7 +31,7 @@ import base64
 import json
 from dataclasses import dataclass
 from datetime import date
-from typing import Protocol
+from typing import ClassVar, Protocol
 
 __all__ = [
     "Extracted",
@@ -94,7 +94,9 @@ class ClaudeCertificateReader:
     読めなかった項目は null で返させる。推測させると、目視確認が形骸化する。
     """
 
-    SCHEMA = {
+    # 書き換えない定義なので、クラス側に持たせる。
+    # 通常の属性にすると、インスタンスごとに共有される可変の値になる。
+    SCHEMA: ClassVar[dict] = {
         "type": "object",
         "properties": {
             "expiry_on": {"type": ["string", "null"], "description": "有効期限 YYYY-MM-DD"},

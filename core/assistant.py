@@ -25,15 +25,14 @@ from dataclasses import dataclass, field
 from datetime import date, timedelta
 
 from core.models import Ledger, Subject
-from core.schedule import add_months
 from core.review import (
     Row,
-    preflight_check,
     build_rows,
-    submission_check,
+    preflight_check,
     summarize_by_subject,
     unrecorded_subjects,
 )
+from core.schedule import add_months
 
 __all__ = ["Answer", "answer", "CAPABILITIES"]
 
@@ -455,7 +454,7 @@ def answer(
                 return Answer(
                     kind=again.kind,
                     headline=again.headline,
-                    lines=[f"（「{canonical}」として受け取りました）"] + again.lines,
+                    lines=[f"（「{canonical}」として受け取りました）", *again.lines],
                     highlight=again.highlight,
                     rows=again.rows,
                     subjects=again.subjects,

@@ -15,9 +15,10 @@
 from __future__ import annotations
 
 import calendar
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
-from typing import Iterable, Literal
+from typing import Literal
 
 __all__ = [
     "ScheduleError",

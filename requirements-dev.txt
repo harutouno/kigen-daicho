@@ -1,6 +1,8 @@
-# テストを動かすために追加で要るもの。
+# テストと静的検査に要るもの。
 # 本番（Streamlit Cloud）では requirements.txt しか読まれないので、
 # ここに入れたものはデプロイされるアプリには含まれない。
 -r requirements.txt
 
 pytest>=8.0
+ruff>=0.16      # 書き方の検査
+mypy>=1.11      # 型の検査
