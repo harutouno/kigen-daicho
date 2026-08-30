@@ -16,9 +16,8 @@ from __future__ import annotations
 
 import calendar
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from typing import Iterable, Literal
-from zoneinfo import ZoneInfo
 
 __all__ = [
     "ScheduleError",
@@ -38,7 +37,12 @@ __all__ = [
 # 実行しているサーバーの時計に任せると、置き場所によって 1 日ずれる。
 # 期限当日を境界として厳密に扱っているため、1 日のずれがそのまま
 # 「期限切れ」と「まだ有効」の差になる。
-BUSINESS_TZ = ZoneInfo("Asia/Tokyo")
+#
+# 固定のずれ幅で持つ。zoneinfo は OS 側のタイムゾーン情報を読むため、
+# それが入っていない実行環境では読み込みの時点で落ちる。日本標準時は
+# 夏時間を持たず、通年で協定世界時 +9 時間なので、表で引く必要がない。
+# 「動く環境を選ぶ」より「どこでも同じ答えになる」方を採る。
+BUSINESS_TZ = timezone(timedelta(hours=9), "JST")
 
 
 def business_today() -> date:
@@ -48,6 +52,7 @@ def business_today() -> date:
     協定世界時で動いており、日本の朝 9 時より前は前日を指す。
     その時間帯に見ると、期限当日のものが「まだ 1 日ある」と表示される。
     """
+    # 実行環境のタイムゾーン設定に依存させない。
     return datetime.now(BUSINESS_TZ).date()
 
 
