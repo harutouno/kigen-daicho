@@ -26,6 +26,7 @@ from core.models import (
     Ledger,
     Record,
     Requirement,
+    Subject,
 )
 from core.review import (
     STATUS_ORDER,
@@ -134,13 +135,19 @@ with st.sidebar:
         add_labels = ("社員を登録", "社員に資格・講習を追加")
 
     st.markdown("**登録**")
-    st.button(add_labels[0], width="stretch", key="btn-add-subject", disabled=True)
-    st.caption(
-        "※ 新規の登録はまだ作っていません。"
-        + ("既存の道具への点検の追加は、その道具を開いてできます。"
-           if nav == PAGE_ASSETS
-           else "既存の社員への資格の追加は、その人を開いてできます。")
-    )
+    if nav == PAGE_ASSETS:
+        st.button(add_labels[0], width="stretch", key="btn-add-subject", disabled=True)
+        st.caption(
+            "※ 道具・機器の新規登録はまだ作っていません。"
+            "既存の道具への点検の追加は、その道具を開いてできます。"
+        )
+    else:
+        if st.button(add_labels[0], width="stretch", key="btn-add-subject"):
+            st.session_state["registering"] = "person"
+            st.session_state.pop("selected", None)
+            st.session_state.pop("selected_holding", None)
+            st.rerun()
+        st.caption("既存の社員への資格の追加は、その人を開いてできます。")
 
     st.divider()
     st.caption("**使い方で迷ったら**\n\n不明な点は事務所までお問い合わせください。")
@@ -326,6 +333,20 @@ def draw_detail(kind: str) -> None:
             slot.markdown(
                 ui.tile(style, counts[key], note, "件"), unsafe_allow_html=True
             )
+
+    # 記録が 1 件も無い対象は、一覧では「資格情報なし」として紫のカードになる。
+    # 詳細で 0 が並ぶだけだと、問題が無いように見えてしまうので明示する。
+    if not rows:
+        st.markdown(ui.pill("unregistered"), unsafe_allow_html=True)
+        st.warning(
+            "まだ何も登録されていません。問題が無いのではなく、"
+            "資格・講習・健診を持っているかどうかが分かっていない状態です。"
+            "下の「＋ 資格・講習・健診を追加する」から登録してください。"
+            if kind == "person"
+            else "まだ何も登録されていません。問題が無いのではなく、"
+                 "点検や校正の状況が分かっていない状態です。",
+            icon="⚠️",
+        )
 
     # 最優先の 1 件。一覧のカードに出しているものと同じ行を、詳細でも先頭に出す。
     urgent = [r for r in rows if r.blocks_assignment or r.status == "due_soon"]
@@ -1253,9 +1274,164 @@ def page_types() -> None:
     )
 
 
+# --- 社員の登録 -----------------------------------------------------------
+
+
+def next_employee_code(prefix: str = "E-") -> str:
+    """空欄で登録されたときに割り当てる社員番号。
+
+    番号がまだ決まっていない新入社員を登録できるようにするため、
+    社員番号は必須にしない。空欄なら既存の最大値の次を割り当てる。
+    """
+    used = 0
+    for s in lg.subjects:
+        if s.kind != "person" or not s.code.startswith(prefix):
+            continue
+        tail = s.code[len(prefix):]
+        if tail.isdigit():
+            used = max(used, int(tail))
+    return f"{prefix}{used + 1:04d}"
+
+
+def code_is_taken(code: str) -> Subject | None:
+    """同じ社員番号を持つ人がいれば返す。
+
+    重複したまま登録すると、一覧でどちらの話をしているのか分からなくなる。
+    手で押す確認ボタンは置かず、登録のときに必ず通す。
+    """
+    for s in lg.subjects:
+        if s.kind == "person" and s.code and s.code == code:
+            return s
+    return None
+
+
+REGISTER_STEPS = [
+    ("unregistered", "登録した直後は「資格情報なし」",
+     "資格が1件も無い社員は、一覧で「資格情報なし（要対応）」として表示されます。"
+     "問題が無いのではなく、まだ何も分かっていないためです。"),
+    ("unknown", "資格・講習・健診を登録する",
+     "登録が終わると、その社員の画面へ移ります。続けて資格や健診を登録してください。"),
+    ("ok", "安全書類の提出前チェックに入る",
+     "情報が揃うと、提出日を指定したチェックの対象になります。"),
+    ("due_soon", "期限が見えるようになる",
+     "期限切れと期限間近が一覧に出るので、更新や受講を前もって手配できます。"),
+]
+
+
+def page_register_person() -> None:
+    st.title("社員を登録する")
+    st.caption("新しく管理する社員の情報を入力してください。※ は必須項目です。")
+
+    if st.button("← 一覧に戻る", key="btn-register-back"):
+        st.session_state.pop("registering", None)
+        st.rerun()
+
+    sites = lg.sites or ["本社"]
+    roles = sorted({s.role for s in lg.subjects if s.kind == "person" and s.role})
+
+    with st.container(border=True):
+        name = st.text_input(
+            "氏名　※", placeholder="例）迫田 和樹", key="reg-name"
+        )
+        st.caption("姓と名の間にスペースを入れてください。")
+
+        kana = st.text_input(
+            "ふりがな　※", placeholder="例）さこだ かずき", key="reg-kana"
+        )
+        st.caption("ひらがなで入力してください。検索に使います。")
+
+        code = st.text_input(
+            "社員番号（任意）", placeholder="例）E-0001", key="reg-code"
+        )
+        st.caption(
+            f"空欄の場合は自動で採番します（次の番号は {next_employee_code()}）。"
+            "同じ番号がすでに使われている場合は、登録のときにお知らせします。"
+        )
+
+        st.markdown("**所属（拠点）　※**")
+        site = st.radio(
+            "所属", sites, horizontal=True, label_visibility="collapsed", key="reg-site"
+        )
+
+        st.markdown("**職種　※**")
+        role = st.radio(
+            "職種", roles, horizontal=True, label_visibility="collapsed", key="reg-role"
+        )
+
+        note = st.text_area(
+            "備考（任意）",
+            placeholder="必要に応じて入力してください",
+            max_chars=200,
+            key="reg-note",
+        )
+
+        left, right = st.columns([1, 2])
+        if left.button("入力をやり直す", width="stretch", key="btn-register-clear"):
+            for k in ("reg-name", "reg-kana", "reg-code", "reg-note"):
+                st.session_state.pop(k, None)
+            st.rerun()
+
+        if right.button(
+            "登録して、資格の登録へ進む",
+            type="primary",
+            width="stretch",
+            key="btn-register-do",
+        ):
+            problems: list[str] = []
+            if not name.strip():
+                problems.append("氏名を入力してください。")
+            if not kana.strip():
+                problems.append("ふりがなを入力してください。")
+
+            wanted = code.strip() or next_employee_code()
+            taken = code_is_taken(wanted)
+            if taken is not None:
+                problems.append(
+                    f"社員番号 {wanted} は {taken.name} さんが使っています。"
+                    "別の番号を入力するか、空欄にして自動採番にしてください。"
+                )
+
+            if problems:
+                for p in problems:
+                    st.error(p, icon="⚠️")
+            else:
+                new_id = f"p-new-{len(lg.subjects) + 1:04d}"
+                lg.subjects.append(
+                    Subject(
+                        id=new_id,
+                        name=name.strip(),
+                        kind="person",
+                        site=site,
+                        role=role,
+                        code=wanted,
+                        kana=kana.strip(),
+                    )
+                )
+                for k in ("reg-name", "reg-kana", "reg-code", "reg-note"):
+                    st.session_state.pop(k, None)
+                st.session_state.pop("registering", None)
+                st.session_state["selected"] = new_id
+                st.session_state["_flash"] = (
+                    f"{name.strip()} さん（{wanted}）を登録しました。"
+                    "資格が1件も無いため、いまは「資格情報なし」の状態です。"
+                    "続けて資格・講習・健診を登録してください。"
+                )
+                st.rerun()
+
+    st.markdown("##### 登録したあとの流れ")
+    steps = st.columns(len(REGISTER_STEPS))
+    for (state, title, body), slot in zip(REGISTER_STEPS, steps):
+        with slot.container(border=True):
+            st.markdown(ui.bar(state), unsafe_allow_html=True)
+            st.markdown(f"**{title}**")
+            st.caption(body)
+
+
 # --- 振り分け -------------------------------------------------------------
 
-if nav == PAGE_PEOPLE:
+if nav == PAGE_PEOPLE and st.session_state.get("registering") == "person":
+    page_register_person()
+elif nav == PAGE_PEOPLE:
     page_people()
 elif nav == PAGE_ASSETS:
     page_assets()
