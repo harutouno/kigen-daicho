@@ -71,6 +71,18 @@ PILL_STATE: dict[str, str] = {
 NOT_BUILT = "この機能はまだ作っていません"
 
 
+def pill_key(state: str, is_asset: bool = False) -> str:
+    """ピルやタイルに使う配色のキー。
+
+    「資格情報なし」は人の言い方で、道具の画面では「点検情報なし」と出したい。
+    状態そのものは同じなので、表示のときだけ切り替える。
+    """
+    key = PILL_STATE[state]
+    if key == "unregistered" and is_asset:
+        return "unregistered_asset"
+    return key
+
+
 # --- 共通の小物 -----------------------------------------------------------
 
 
@@ -135,19 +147,16 @@ with st.sidebar:
         add_labels = ("社員を登録", "社員に資格・講習を追加")
 
     st.markdown("**登録**")
-    if nav == PAGE_ASSETS:
-        st.button(add_labels[0], width="stretch", key="btn-add-subject", disabled=True)
-        st.caption(
-            "※ 道具・機器の新規登録はまだ作っていません。"
-            "既存の道具への点検の追加は、その道具を開いてできます。"
-        )
-    else:
-        if st.button(add_labels[0], width="stretch", key="btn-add-subject"):
-            st.session_state["registering"] = "person"
-            st.session_state.pop("selected", None)
-            st.session_state.pop("selected_holding", None)
-            st.rerun()
-        st.caption("既存の社員への資格の追加は、その人を開いてできます。")
+    if st.button(add_labels[0], width="stretch", key="btn-add-subject"):
+        st.session_state["registering"] = "asset" if nav == PAGE_ASSETS else "person"
+        st.session_state.pop("selected", None)
+        st.session_state.pop("selected_holding", None)
+        st.rerun()
+    st.caption(
+        "既存の道具への点検の追加は、その道具を開いてできます。"
+        if nav == PAGE_ASSETS
+        else "既存の社員への資格の追加は、その人を開いてできます。"
+    )
 
     st.divider()
     st.caption("**使い方で迷ったら**\n\n不明な点は事務所までお問い合わせください。")
@@ -167,8 +176,9 @@ def draw_card(summary: SubjectSummary, slot) -> None:
 
     # 見出しには「期限間近（30日以内）」と出すが、カードの中は幅が狭いので短い方を使う。
     # キーを付けると st-key-... の class が振られ、状態ごとの色帯を当てられる。
+    key = pill_key(summary.worst, is_asset)
     with slot.container(border=True, key=f"card-{PILL_STATE[summary.worst]}-{subject.id}"):
-        st.markdown(ui.bar(PILL_STATE[summary.worst]), unsafe_allow_html=True)
+        st.markdown(ui.bar(key), unsafe_allow_html=True)
         st.markdown(f"##### {subject.name}")
         if is_asset:
             # 道具は名前では特定できない。「絶縁手袋」は何組もあるため、
@@ -178,8 +188,7 @@ def draw_card(summary: SubjectSummary, slot) -> None:
                 st.caption(f"型番：{subject.model}")
         else:
             st.caption(f"{subject.site} ／ {subject.role}")
-        st.markdown(ui.pill(PILL_STATE[summary.worst], short=True),
-                    unsafe_allow_html=True)
+        st.markdown(ui.pill(key, short=True), unsafe_allow_html=True)
 
         cause = summary.cause
         if cause is None:
@@ -337,7 +346,8 @@ def draw_detail(kind: str) -> None:
     # 記録が 1 件も無い対象は、一覧では「資格情報なし」として紫のカードになる。
     # 詳細で 0 が並ぶだけだと、問題が無いように見えてしまうので明示する。
     if not rows:
-        st.markdown(ui.pill("unregistered"), unsafe_allow_html=True)
+        st.markdown(ui.pill(pill_key("unregistered", is_asset)),
+                    unsafe_allow_html=True)
         st.warning(
             "まだ何も登録されていません。問題が無いのではなく、"
             "資格・講習・健診を持っているかどうかが分かっていない状態です。"
@@ -1006,7 +1016,7 @@ def page_assets() -> None:
 
     tiles = st.columns(len(SECTIONS) + 1)
     for (key, label, note), slot in zip(SECTIONS, tiles):
-        slot.markdown(ui.tile(key, len(by_status[key]), note, "件"),
+        slot.markdown(ui.tile(pill_key(key, True), len(by_status[key]), note, "件"),
                       unsafe_allow_html=True)
     tiles[-1].markdown(
         ui.tile("ok", len(clear), "期限切れ・期限間近はありません", "件"),
@@ -1057,7 +1067,9 @@ def page_assets() -> None:
             if not items:
                 continue
             any_shown = True
-            st.markdown(ui.section(label, len(items), "件"), unsafe_allow_html=True)
+            # 「資格情報なし」は人の言い方。道具の画面では別の言葉にする。
+            shown_label = ui.STATE_STYLE[pill_key(key, True)][0] if key == "unregistered" else label
+            st.markdown(ui.section(shown_label, len(items), "件"), unsafe_allow_html=True)
             draw_grid(items)
 
         if shown_clear and clear:
@@ -1427,12 +1439,169 @@ def page_register_person() -> None:
             st.caption(body)
 
 
+# --- 道具・機器の登録 -------------------------------------------------------
+
+
+def next_asset_code(prefix: str = "M-") -> str:
+    """空欄で登録されたときに割り当てる管理番号。
+
+    道具の管理番号は会社が現物に貼るものなので、本来は手で入れる。
+    ただし買ったばかりで番号がまだ貼られていない場合に登録できないと困るため、
+    空欄なら仮の番号を割り当てる。
+    """
+    used = 0
+    for s in lg.subjects:
+        if s.kind != "asset" or not s.code.startswith(prefix):
+            continue
+        tail = s.code[len(prefix):]
+        if tail.isdigit():
+            used = max(used, int(tail))
+    return f"{prefix}{used + 1:04d}"
+
+
+def asset_code_is_taken(code: str) -> Subject | None:
+    """同じ管理番号の道具がいれば返す。
+
+    道具は名前では特定できないため、管理番号が重複すると現物にたどり着けなくなる。
+    人の社員番号より影響が大きい。
+    """
+    for s in lg.subjects:
+        if s.kind == "asset" and s.code and s.code == code:
+            return s
+    return None
+
+
+REGISTER_ASSET_STEPS = [
+    ("unregistered_asset", "登録した直後は「点検情報なし」",
+     "点検が1件も無い道具は、一覧で「点検情報なし（要対応）」として表示されます。"
+     "問題が無いのではなく、まだ何も分かっていないためです。"),
+    ("unknown", "点検・校正を登録する",
+     "登録が終わると、その道具の画面へ移ります。続けて点検や校正を登録してください。"),
+    ("ok", "前回実施日から次回期日が決まる",
+     "周期と前回実施日が揃うと、次回の期日が自動で計算されます。"),
+    ("due_soon", "期限が見えるようになる",
+     "絶縁用保護具の6か月検査のように周期の短いものほど、抜けを防げます。"),
+]
+
+
+def page_register_asset() -> None:
+    st.title("道具・機器を登録する")
+    st.caption("新しく管理する道具・機器の情報を入力してください。※ は必須項目です。")
+
+    if st.button("← 一覧に戻る", key="btn-register-asset-back"):
+        st.session_state.pop("registering", None)
+        st.rerun()
+
+    sites = lg.sites or ["本社"]
+    kinds = sorted({s.role for s in lg.subjects if s.kind == "asset" and s.role})
+
+    with st.container(border=True):
+        name = st.text_input(
+            "名称　※", placeholder="例）絶縁手袋 A組", key="reg-a-name"
+        )
+        st.caption("何であるかが分かる名前を入れてください。")
+
+        code = st.text_input(
+            "管理番号（任意）", placeholder="例）GLO-001", key="reg-a-code"
+        )
+        st.caption(
+            f"現物に貼っている番号を入れてください。"
+            f"空欄の場合は仮の番号を割り当てます（次は {next_asset_code()}）。"
+            "同じ番号がすでに使われている場合は、登録のときにお知らせします。"
+        )
+
+        model = st.text_input(
+            "型番（任意）", placeholder="例）YOTSUGI YS-101-23-01", key="reg-a-model"
+        )
+        st.caption("校正や修理を依頼するときに使います。分かれば入れてください。")
+
+        st.markdown("**保管場所　※**")
+        site = st.radio(
+            "保管場所", sites, horizontal=True,
+            label_visibility="collapsed", key="reg-a-site",
+        )
+
+        st.markdown("**種類　※**")
+        role = st.radio(
+            "種類", kinds, horizontal=True,
+            label_visibility="collapsed", key="reg-a-role",
+        )
+
+        note = st.text_area(
+            "備考（任意）",
+            placeholder="必要に応じて入力してください",
+            max_chars=200,
+            key="reg-a-note",
+        )
+
+        left, right = st.columns([1, 2])
+        if left.button("入力をやり直す", width="stretch", key="btn-register-a-clear"):
+            for k in ("reg-a-name", "reg-a-code", "reg-a-model", "reg-a-note"):
+                st.session_state.pop(k, None)
+            st.rerun()
+
+        if right.button(
+            "登録して、点検の登録へ進む",
+            type="primary",
+            width="stretch",
+            key="btn-register-a-do",
+        ):
+            problems: list[str] = []
+            if not name.strip():
+                problems.append("名称を入力してください。")
+
+            wanted = code.strip() or next_asset_code()
+            taken = asset_code_is_taken(wanted)
+            if taken is not None:
+                problems.append(
+                    f"管理番号 {wanted} は「{taken.name}」が使っています。"
+                    "別の番号を入力するか、空欄にして自動採番にしてください。"
+                )
+
+            if problems:
+                for p in problems:
+                    st.error(p, icon="⚠️")
+            else:
+                new_id = f"a-new-{len(lg.subjects) + 1:04d}"
+                lg.subjects.append(
+                    Subject(
+                        id=new_id,
+                        name=name.strip(),
+                        kind="asset",
+                        site=site,
+                        role=role,
+                        code=wanted,
+                        model=model.strip(),
+                    )
+                )
+                for k in ("reg-a-name", "reg-a-code", "reg-a-model", "reg-a-note"):
+                    st.session_state.pop(k, None)
+                st.session_state.pop("registering", None)
+                st.session_state["selected"] = new_id
+                st.session_state["_flash"] = (
+                    f"「{name.strip()}」（{wanted}）を登録しました。"
+                    "点検が1件も無いため、いまは「点検情報なし」の状態です。"
+                    "続けて点検・校正を登録してください。"
+                )
+                st.rerun()
+
+    st.markdown("##### 登録したあとの流れ")
+    steps = st.columns(len(REGISTER_ASSET_STEPS))
+    for (state, title, body), slot in zip(REGISTER_ASSET_STEPS, steps):
+        with slot.container(border=True):
+            st.markdown(ui.bar(state), unsafe_allow_html=True)
+            st.markdown(f"**{title}**")
+            st.caption(body)
+
+
 # --- 振り分け -------------------------------------------------------------
 
 if nav == PAGE_PEOPLE and st.session_state.get("registering") == "person":
     page_register_person()
 elif nav == PAGE_PEOPLE:
     page_people()
+elif nav == PAGE_ASSETS and st.session_state.get("registering") == "asset":
+    page_register_asset()
 elif nav == PAGE_ASSETS:
     page_assets()
 elif nav == PAGE_SUBMISSION:
