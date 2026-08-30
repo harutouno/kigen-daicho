@@ -558,17 +558,25 @@ def draw_holding_detail(kind: str) -> None:
                 st.markdown("\n".join(lines))
 
     # --- 履歴 ---------------------------------------------------------------
-    st.markdown("##### 受講・実施の履歴")
+    st.markdown(ui.section("受講・実施の履歴", len(holding.records), "回"),
+                unsafe_allow_html=True)
     if not holding.records:
         st.info("まだ記録がありません。下の「実施を記録する」から入力してください。")
     else:
-        widths = [0.8, 1.6, 1.6, 1.4, 2]
+        st.caption(
+            "記録は追記のみで、書き換えません。過去の回もそのまま残ります。"
+        )
+        widths = [0.7, 1.5, 1.5, 1.1, 1.8, 0.9, 1.0]
         header = st.columns(widths)
-        for slot, label in zip(header, ["回数", "実施日", "この記録による期限", "実施者", "備考"]):
+        for slot, label in zip(
+            header,
+            ["回数", "実施日", "この回による期限", "実施者", "備考", "添付", ""],
+        ):
             slot.caption(f"**{label}**")
 
         # 記録は追記のみ。古い順に並べ、何回目かを示す。
-        for i, rec in enumerate(sorted(holding.records, key=lambda r: r.done_on), start=1):
+        ordered = sorted(holding.records, key=lambda r: r.done_on)
+        for i, rec in enumerate(ordered, start=1):
             cols = st.columns(widths)
             cols[0].write(f"{i}回目")
             cols[1].write(jp_date(rec.done_on))
@@ -578,6 +586,13 @@ def draw_holding_detail(kind: str) -> None:
                 cols[2].write("—")
             cols[3].write(rec.done_by or "—")
             cols[4].write(rec.memo or "—")
+            cols[5].write(f"{len(rec.attachments)}件" if rec.attachments else "—")
+            key = f"{holding.id}-{rec.done_on.isoformat()}-{i}"
+            if cols[6].button("この回を見る", key=f"see-{key}", width="stretch"):
+                st.session_state["seen_record"] = key
+                st.rerun()
+
+        draw_record_detail(holding, req, ordered)
 
     # --- 入力 ---------------------------------------------------------------
     plan, record = st.columns(2)
@@ -635,21 +650,69 @@ def draw_holding_detail(kind: str) -> None:
             st.markdown("**補足**")
             st.write(req.note)
 
-    # --- 添付ファイル（フラグで閉じている） ---------------------------------
+
+def draw_record_detail(holding, req, ordered: list) -> None:
+    """選んだ回の中身。開閉ではなく、常にここにある領域が入れ替わる。
+
+    添付は回ごとに持つ。2021年の修了証と2026年の修了証が同じ場所に混ざると、
+    どの回の控えなのか分からなくなるため。
+    """
+    seen = st.session_state.get("seen_record")
+    target = None
+    for i, rec in enumerate(ordered, start=1):
+        if f"{holding.id}-{rec.done_on.isoformat()}-{i}" == seen:
+            target, number = rec, i
+            break
+
     with st.container(border=True):
-        st.markdown("**修了証・証明書の画像**")
-        if ATTACHMENTS_ENABLED:
-            st.file_uploader(
-                "画像を追加する", type=["png", "jpg", "jpeg", "pdf"],
-                key=f"upload-{holding.id}",
-            )
+        if target is None:
+            st.caption("表の「この回を見る」を押すと、その回の内容と控えがここに出ます。")
+            return
+
+        head, close = st.columns([4, 1])
+        head.markdown(f"**{number}回目　{jp_date(target.done_on)}**")
+        if close.button("閉じる", key="btn-close-record", width="stretch"):
+            st.session_state.pop("seen_record", None)
+            st.rerun()
+
+        info = st.columns(3)
+        info[0].caption("実施者")
+        info[0].write(target.done_by or "—")
+        info[1].caption("この回による期限")
+        if req.date_mode == "cycle" and req.cycle_months:
+            info[1].write(jp_date(add_months(target.done_on, req.cycle_months)))
         else:
-            st.file_uploader(
-                "画像を追加する", type=["png", "jpg", "jpeg", "pdf"],
-                key=f"upload-{holding.id}", disabled=True,
-            )
+            info[1].write("—")
+        info[2].caption("備考")
+        info[2].write(target.memo or "—")
+
+        st.markdown("**この回の控え**")
+        if not target.attachments:
+            st.caption("この回に登録された控えはありません。")
+        else:
+            widths = [3, 1.2, 1.6, 1.2]
+            header = st.columns(widths)
+            for slot, label in zip(header, ["ファイル名", "大きさ", "登録日", "登録者"]):
+                slot.caption(f"**{label}**")
+            for att in target.attachments:
+                cols = st.columns(widths)
+                cols[0].write(att.filename)
+                cols[1].write(f"{att.size // 1024} KB" if att.size else "—")
+                cols[2].write(jp_date(att.uploaded_on) if att.uploaded_on else "—")
+                cols[3].write(att.uploaded_by or "—")
             st.caption(
-                "※ この機能は公開デモでは無効にしています。"
+                "※ このデモでは控えの一覧だけを持ち、ファイルの中身は保存していません。"
+            )
+
+        st.file_uploader(
+            "この回の控えを追加する",
+            type=["png", "jpg", "jpeg", "pdf"],
+            key=f"upload-{holding.id}-{number}",
+            disabled=not ATTACHMENTS_ENABLED,
+        )
+        if not ATTACHMENTS_ENABLED:
+            st.caption(
+                "※ 追加は公開デモでは無効にしています。"
                 "修了証には氏名・生年月日・証番号が写るため、"
                 "誰でも触れる状態で本物を預かることを避けています。"
                 "実運用で有効にする場合は、アクセス制御と保存期間の設計が別に必要です。"

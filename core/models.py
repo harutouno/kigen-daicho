@@ -21,6 +21,7 @@ __all__ = [
     "Category",
     "DateMode",
     "Obligation",
+    "Attachment",
     "Requirement",
     "Subject",
     "Record",
@@ -163,24 +164,70 @@ class Subject:
 
 
 @dataclass(frozen=True)
+class Attachment:
+    """記録に添えた書類。修了証や点検成績書の控え。
+
+    ここに持つのは「何が・いつ・誰によって」登録されたかだけで、
+    ファイルの中身は持たない。中身の置き場は運用の判断（保存期間・アクセス制御）に
+    依るため、台帳の型には混ぜない。
+    """
+
+    id: str
+    filename: str
+    size: int = 0
+    uploaded_on: date | None = None
+    uploaded_by: str = ""
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> Attachment:
+        return cls(
+            id=d["id"],
+            filename=d["filename"],
+            size=d.get("size", 0),
+            uploaded_on=_to_date(d.get("uploaded_on")),
+            uploaded_by=d.get("uploaded_by", ""),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "filename": self.filename,
+            "size": self.size,
+            "uploaded_on": _from_date(self.uploaded_on),
+            "uploaded_by": self.uploaded_by,
+        }
+
+
+@dataclass(frozen=True)
 class Record:
-    """実施した事実。追記のみで、書き換えない。"""
+    """実施した事実。追記のみで、書き換えない。
+
+    添付はこの記録に属する。台帳全体に 1 つだけ持つと、2021年の修了証と
+    2026年の修了証を区別できず、蓄積する意味がなくなるため。
+    """
 
     done_on: date
     done_by: str = ""
     memo: str = ""
+    attachments: list[Attachment] = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> Record:
         done_on = _to_date(d["done_on"])
         assert done_on is not None
-        return cls(done_on=done_on, done_by=d.get("done_by", ""), memo=d.get("memo", ""))
+        return cls(
+            done_on=done_on,
+            done_by=d.get("done_by", ""),
+            memo=d.get("memo", ""),
+            attachments=[Attachment.from_dict(a) for a in d.get("attachments", [])],
+        )
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "done_on": _from_date(self.done_on),
             "done_by": self.done_by,
             "memo": self.memo,
+            "attachments": [a.to_dict() for a in self.attachments],
         }
 
 

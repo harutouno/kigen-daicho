@@ -101,8 +101,16 @@ def build() -> dict:
                 ("req-kanri-course", {"fixed_due_on": iso(TODAY - timedelta(days=29)),
                                       "planned_on": iso(TODAY + timedelta(days=21)),
                                       "note": "資格者証は有効だが講習が切れている。受講を予約済み。"}),
-                ("req-kenshin", {"records": [{"done_on": iso(TODAY - timedelta(days=192)),
-                                              "done_by": "総務", "memo": "定期健診"}]}),
+                ("req-kenshin", {"records": [
+                    {"done_on": iso(TODAY - timedelta(days=557)), "done_by": "総務",
+                     "memo": "前年度の定期健診"},
+                    {"done_on": iso(TODAY - timedelta(days=192)), "done_by": "総務",
+                     "memo": "定期健診",
+                     "attachments": [{"id": "att-0010", "filename": "健康診断個人票_2026.pdf",
+                                      "size": 156000,
+                                      "uploaded_on": iso(TODAY - timedelta(days=185)),
+                                      "uploaded_by": "総務"}]},
+                ]}),
                 # 有効期限が存在しない資格・講習。保有の記録として持つが期限は発生しない。
                 ("req-den1-menjo", {}),
                 ("req-awp-skill", {}),
@@ -124,8 +132,25 @@ def build() -> dict:
         {
             "id": "p-003", "code": "E-0003", "kana": "やまぐち まさと", "name": "山口 正人", "site": "鹿屋支店", "role": "電気工事",
             "holdings": [
-                ("req-den1-course", {"records": [{"done_on": iso(TODAY - timedelta(days=1962)),
-                                                  "done_by": "本人", "memo": "定期講習"}]}),
+                # 過去の回が積み上がっている例。回ごとに証明書の控えが付く。
+                ("req-den1-course", {"records": [
+                    {"done_on": iso(TODAY - timedelta(days=3789)), "done_by": "本人",
+                     "memo": "初回（免状交付後）",
+                     "attachments": [{"id": "att-0001", "filename": "定期講習修了証_2016.jpg",
+                                      "size": 412000,
+                                      "uploaded_on": iso(TODAY - timedelta(days=3780)),
+                                      "uploaded_by": "総務"}]},
+                    {"done_on": iso(TODAY - timedelta(days=1962)), "done_by": "本人",
+                     "memo": "2回目",
+                     "attachments": [{"id": "att-0002", "filename": "定期講習修了証_2021.jpg",
+                                      "size": 398000,
+                                      "uploaded_on": iso(TODAY - timedelta(days=1955)),
+                                      "uploaded_by": "総務"},
+                                     {"id": "att-0003", "filename": "受講申込控_2021.pdf",
+                                      "size": 88000,
+                                      "uploaded_on": iso(TODAY - timedelta(days=1990)),
+                                      "uploaded_by": "本人"}]},
+                ]}),
                 ("req-den1-menjo", {}),
                 # 定期講習が切れているうえに健診も近い。1 人が複数抱える例。
                 ("req-kenshin", {"records": [{"done_on": iso(TODAY - timedelta(days=343)),
