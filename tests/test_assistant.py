@@ -247,7 +247,10 @@ def test_言い換えられれば答えられる():
     assert a.kind == "query"
     assert "言い換え" not in a.headline
     assert "として受け取りました" in a.lines[0]
-    assert len(a.rows) == 1
+    # この台帳は期限切れ1件・期限間近1件なので、件数だけでは区別できない。
+    # どちらの行を返したかまで見る。
+    assert [r.holding.id for r in a.rows] == ["h1"]
+    assert a.rows[0].status == "overdue"
 
 
 def test_言い換えられなければ答えられないと言う():
@@ -269,7 +272,8 @@ def test_言い換え役が嘘の答えを返しても件数は台帳から出�
 
     a = answer(lg, "なんか教えて", TODAY, normalizer=fake)
     # 台帳の実数は 1 件。言い換え役の言う 5 件にはならない。
-    assert len(a.rows) == 1
+    assert [r.holding.id for r in a.rows] == ["h1"]
+    assert a.rows[0].status == "overdue"
     assert "5件" not in a.headline
 
 
