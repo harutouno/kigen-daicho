@@ -285,7 +285,17 @@ def assignment_check(
 
     戻り値は (配置可否, 理由の一覧)。可の場合、理由は空。
     """
-    rows = {r.requirement.id: r for r in build_rows(ledger, as_of) if r.subject.id == subject_id}
+    # 種類ごとに、最も危ない行を採る。
+    # 辞書に詰め直すと同じ種類の 2 件目が 1 件目を上書きし、
+    # 期限切れの行が有効な行に潰される。読み込み時にも重複は止めているが、
+    # 判定側でも危ない方を残す。安全側に倒れる経路を二重に持たせる。
+    rows: dict[str, Row] = {}
+    for row in build_rows(ledger, as_of):
+        if row.subject.id != subject_id:
+            continue
+        current = rows.get(row.requirement.id)
+        if current is None or STATUS_ORDER[row.status] < STATUS_ORDER[current.status]:
+            rows[row.requirement.id] = row
 
     reasons: list[str] = []
     for requirement_id in required_requirement_ids:

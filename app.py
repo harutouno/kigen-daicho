@@ -751,38 +751,57 @@ def draw_holding_detail(kind: str) -> None:
                 st.markdown("\n".join(lines))
 
     # --- 履歴 ---------------------------------------------------------------
-    st.markdown(ui.section("受講・実施の履歴", len(holding.records), "回"),
-                unsafe_allow_html=True)
+    is_fixed = req.date_mode == "fixed"
+    # 訂正されたものは残すが、回数には数えない。数えると
+    # 「3回受けた」と見えるのに有効な記録は2回、という表示になる。
+    live = holding.effective_records()
+    st.markdown(
+        ui.section("有効期限の登録の履歴" if is_fixed else "受講・実施の履歴",
+                   len(live), "回"),
+        unsafe_allow_html=True)
     if not holding.records:
-        st.info("まだ記録がありません。下の「実施を記録する」から入力してください。")
+        st.info(
+            "まだ記録がありません。下の「新しい有効期限を登録する」から入力してください。"
+            if is_fixed
+            else "まだ記録がありません。下の「実施を記録する」から入力してください。"
+        )
     else:
         st.caption(
             "記録は追記のみで、書き換えません。過去の回もそのまま残ります。"
+            "日付を間違えた場合は、その回を開いて訂正してください。"
         )
         widths = [0.7, 1.5, 1.5, 1.1, 1.8, 0.9, 1.0]
         header = st.columns(widths)
         for slot, label in zip(
             header,
-            ["回数", "実施日", "この回による期限", "実施者", "備考", "添付", ""],
+            ["回数",
+             "受け取った日" if is_fixed else "実施日",
+             "有効期限" if is_fixed else "この回による期限",
+             "実施者", "備考", "添付", ""],
         ):
             slot.caption(f"**{label}**")
 
         # 記録は追記のみ。古い順に並べ、何回目かを示す。
         ordered = sorted(holding.records, key=lambda r: r.done_on)
+        superseded = holding.superseded_ids
         for i, rec in enumerate(ordered, start=1):
             cols = st.columns(widths)
-            cols[0].write(f"{i}回目")
-            cols[1].write(jp_date(rec.done_on))
-            if req.date_mode == "cycle" and req.cycle_months:
+            done = rec.id in superseded
+            cols[0].write(f"~~{i}回目~~" if done else f"{i}回目")
+            cols[1].write(jp_date(rec.done_on) + ("（訂正済み）" if done else ""))
+            if rec.is_expiry_update:
+                cols[2].write(jp_date(rec.expiry_on))
+            elif req.date_mode == "cycle" and req.cycle_months:
                 cols[2].write(jp_date(add_months(rec.done_on, req.cycle_months)))
             else:
                 cols[2].write("—")
             cols[3].write(rec.done_by or "—")
             cols[4].write(rec.memo or "—")
             cols[5].write(f"{len(rec.attachments)}件" if rec.attachments else "—")
-            key = f"{holding.id}-{rec.done_on.isoformat()}-{i}"
-            if cols[6].button("この回を見る", key=f"see-{key}", width="stretch"):
-                st.session_state["seen_record"] = key
+            # 記録そのものの id で指す。日付で作ると、同じ日に訂正した回と
+            # 元の回が同じ鍵になり、別の回が開く。
+            if cols[6].button("この回を見る", key=f"see-{rec.id}", width="stretch"):
+                st.session_state["seen_record"] = rec.id
                 st.rerun()
 
         draw_record_detail(holding, req, ordered)
@@ -817,29 +836,52 @@ def draw_holding_detail(kind: str) -> None:
             st.caption(
                 "更新して新しい証を受け取ったら、そこに書かれている期限を入れてください。"
             )
-            new_due = st.date_input(
+            current = holding.expiry_on_at(today)
+            c1, c2 = st.columns(2)
+            new_due = c1.date_input(
                 "新しい有効期限",
-                value=holding.fixed_due_on,
+                value=current,
                 key=f"detail-newdue-{holding.id}",
             )
+            # いつ受け取ったかを持たないと、更新した瞬間に過去の判定まで
+            # 新しい期限で塗り替わり、「その時点では切れていた」という事実が
+            # 台帳から消える。更新は上書きではなく、積む。
+            got_on = c2.date_input(
+                "受け取った日",
+                value=today,
+                key=f"detail-goton-{holding.id}",
+            )
+            st.caption(
+                "「受け取った日」より前の判定には、いまの期限が使われ続けます。"
+                "過去に提出した書類の判定を、あとから変えないためです。"
+            )
             if st.button(
-                "この期限に更新する",
+                "この期限を登録する",
                 type="primary",
                 width="stretch",
                 key="btn-detail-renew",
             ):
-                if new_due == holding.fixed_due_on:
+                if new_due == current:
                     st.info("いまの期限と同じです。変更はありません。")
                 else:
-                    old = holding.fixed_due_on
-                    holding.fixed_due_on = new_due
-                    holding.planned_on = None
-                    st.session_state["_flash"] = (
-                        f"{req.name} の有効期限を "
-                        f"{jp_date(old) if old else '未入力'} から "
-                        f"{jp_date(new_due)} に更新しました。"
-                    )
-                    st.rerun()
+                    try:
+                        validate_done_on(got_on, today)
+                    except ScheduleError as e:
+                        st.error(str(e), icon="⚠️")
+                    else:
+                        holding.add_record(Record(
+                            done_on=got_on,
+                            expiry_on=new_due,
+                            memo="新しい有効期限を登録",
+                        ))
+                        holding.planned_on = None
+                        st.session_state["_flash"] = (
+                            f"{req.name} の有効期限を "
+                            f"{jp_date(current) if current else '未入力'} から "
+                            f"{jp_date(new_due)} に更新しました"
+                            f"（{jp_date(got_on)} 受け取り）。"
+                        )
+                        st.rerun()
         elif req.date_mode == "none":
             st.markdown("**実施を記録する**")
             st.caption("この記録に期限はありません。保有の記録として登録されています。")
@@ -880,7 +922,7 @@ def draw_record_detail(holding, req, ordered: list) -> None:
     seen = st.session_state.get("seen_record")
     target = None
     for i, rec in enumerate(ordered, start=1):
-        if f"{holding.id}-{rec.done_on.isoformat()}-{i}" == seen:
+        if rec.id == seen:
             target, number = rec, i
             break
 
@@ -895,11 +937,26 @@ def draw_record_detail(holding, req, ordered: list) -> None:
             st.session_state.pop("seen_record", None)
             st.rerun()
 
+        corrected = target.id in holding.superseded_ids
+        if corrected:
+            replacement = next(
+                (r for r in holding.records if r.supersedes == target.id), None
+            )
+            st.warning(
+                "この記録は訂正されています。判定には使われていません。"
+                + (f"　訂正後：{jp_date(replacement.done_on)}" if replacement else ""),
+                icon="✏️",
+            )
+        elif target.supersedes:
+            st.caption("※ この記録は、別の記録の訂正として登録されたものです。")
+
         info = st.columns(3)
         info[0].caption("実施者")
         info[0].write(target.done_by or "—")
-        info[1].caption("この回による期限")
-        if req.date_mode == "cycle" and req.cycle_months:
+        info[1].caption("有効期限" if target.is_expiry_update else "この回による期限")
+        if target.is_expiry_update:
+            info[1].write(jp_date(target.expiry_on))
+        elif req.date_mode == "cycle" and req.cycle_months:
             info[1].write(jp_date(add_months(target.done_on, req.cycle_months)))
         else:
             info[1].write("—")
@@ -923,6 +980,53 @@ def draw_record_detail(holding, req, ordered: list) -> None:
             st.caption(
                 "※ このデモでは控えの一覧だけを持ち、ファイルの中身は保存していません。"
             )
+
+        if not corrected:
+            # 日付を間違えて登録したとき、正しい日付をただ追記しても直らない。
+            # 最も新しい日付が採用されるので、誤って実際より後の日付を入れて
+            # いると、そちらが残って期限が実際より先へ延びる。
+            # 元の記録は消さず、置き換えとして積む。
+            with st.expander("この記録の日付を間違えた場合"):
+                st.caption(
+                    "正しい日付でもう一度記録しても直りません。"
+                    "新しい方の日付が使われてしまうためです。ここから訂正してください。"
+                    "元の記録は消えず、「訂正済み」として残ります。"
+                )
+                fixed_on = st.date_input(
+                    "正しい" + ("受け取った日" if target.is_expiry_update else "実施した日"),
+                    value=target.done_on,
+                    key=f"fix-date-{holding.id}-{number}",
+                )
+                fixed_expiry = None
+                if target.is_expiry_update:
+                    fixed_expiry = st.date_input(
+                        "正しい有効期限",
+                        value=target.expiry_on,
+                        key=f"fix-expiry-{holding.id}-{number}",
+                    )
+                reason = st.text_input(
+                    "訂正の理由", value="", placeholder="例）修了証を見て確認しました",
+                    key=f"fix-memo-{holding.id}-{number}",
+                )
+                if st.button("この内容に訂正する", key=f"btn-fix-{holding.id}-{number}"):
+                    try:
+                        validate_done_on(fixed_on, today)
+                        holding.correct_record(target.id, Record(
+                            done_on=fixed_on,
+                            done_by=target.done_by,
+                            memo=reason or "訂正",
+                            expiry_on=fixed_expiry,
+                            attachments=list(target.attachments),
+                        ))
+                    except (ScheduleError, LedgerDataError) as e:
+                        st.error(str(e), icon="⚠️")
+                    else:
+                        st.session_state.pop("seen_record", None)
+                        st.session_state["_flash"] = (
+                            f"{jp_date(target.done_on)} の記録を "
+                            f"{jp_date(fixed_on)} に訂正しました。"
+                        )
+                        st.rerun()
 
         st.file_uploader(
             "この回の控えを追加する",

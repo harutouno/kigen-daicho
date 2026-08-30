@@ -15,7 +15,14 @@ from datetime import date
 
 import pytest
 
-from core.models import Holding, Ledger, LedgerDataError, Record
+from core.models import (
+    Holding,
+    Ledger,
+    LedgerDataError,
+    Record,
+    Requirement,
+    Subject,
+)
 from core.store import load_ledger
 
 
@@ -137,3 +144,128 @@ def test_同じ名前を二重に登録しない():
     lg.add_site("本社")
     lg.add_site("本社")
     assert lg.site_master == ["本社"]
+
+
+# --- 記録の訂正 -----------------------------------------------------------
+#
+# 「間違えたら正しい日付でもう一度記録する」と書いてあったが、その手順では
+# 直らなかった。最も新しい日付が採用されるので、誤って実際より後の日付を
+# 入れていると、そちらが残って期限が実際より先へ延びる。
+# 期限が延びる方向に外れるのが、この台帳で最も避けたい壊れ方である。
+
+
+def _cycle_req() -> Requirement:
+    return Requirement(id="k", name="定期健康診断", category="qualification",
+                       obligation="legal", date_mode="cycle", cycle_months=12)
+
+
+def test_実際より後の日付で誤登録しても訂正できる():
+    wrong = Record(done_on=date(2026, 8, 20))          # 本当は 6/20 だった
+    h = Holding(id="h", subject_id="p", requirement_id="k", records=[wrong])
+
+    # 正しい日付を「ただ追記」しても直らないこと（これが元の不具合）
+    h.add_record(Record(done_on=date(2026, 6, 20)))
+    assert h.due_on(_cycle_req(), date(2026, 8, 30)) == date(2027, 8, 20)
+
+    # 訂正として積めば直る
+    h2 = Holding(id="h", subject_id="p", requirement_id="k", records=[wrong])
+    h2.correct_record(wrong.id, Record(done_on=date(2026, 6, 20)))
+    assert h2.last_done_on_at(date(2026, 8, 30)) == date(2026, 6, 20)
+    assert h2.due_on(_cycle_req(), date(2026, 8, 30)) == date(2027, 6, 20)
+
+
+def test_訂正しても元の記録は消えない():
+    """消せる台帳は監査で信用されない。残したうえで使わない。"""
+    wrong = Record(done_on=date(2026, 8, 20))
+    h = Holding(id="h", subject_id="p", requirement_id="k", records=[wrong])
+    h.correct_record(wrong.id, Record(done_on=date(2026, 6, 20)))
+
+    assert len(h.records) == 2
+    assert wrong.id in h.superseded_ids
+    assert len(h.effective_records()) == 1
+
+
+def test_同じ記録を二度訂正しない():
+    wrong = Record(done_on=date(2026, 8, 20))
+    h = Holding(id="h", subject_id="p", requirement_id="k", records=[wrong])
+    h.correct_record(wrong.id, Record(done_on=date(2026, 6, 20)))
+    with pytest.raises(LedgerDataError):
+        h.correct_record(wrong.id, Record(done_on=date(2026, 5, 1)))
+
+
+def test_存在しない記録は訂正できない():
+    h = Holding(id="h", subject_id="p", requirement_id="k")
+    with pytest.raises(LedgerDataError):
+        h.correct_record("ないid", Record(done_on=date(2026, 6, 20)))
+
+
+# --- 有効期限の履歴 -------------------------------------------------------
+
+
+def _fixed_req() -> Requirement:
+    return Requirement(id="men", name="運転免許証", category="qualification",
+                       obligation="legal", date_mode="fixed")
+
+
+def test_免状を更新しても更新前の判定は変わらない():
+    """更新は「新しい証を受け取った」という新しい事実であって、
+    過去の証の期限が間違っていたわけではない。
+
+    以前は fixed_due_on を上書きしていたため、更新した瞬間に
+    「2026年8月1日時点では切れていた」という事実が台帳から消えていた。
+    """
+    h = Holding(id="h", subject_id="p", requirement_id="men",
+                fixed_due_on=date(2026, 7, 31))
+    h.add_record(Record(done_on=date(2026, 9, 1), expiry_on=date(2030, 7, 31)))
+
+    assert h.expiry_on_at(date(2026, 8, 1)) == date(2026, 7, 31)   # 更新前
+    assert h.expiry_on_at(date(2026, 10, 1)) == date(2030, 7, 31)  # 更新後
+    assert h.due_on(_fixed_req(), date(2026, 8, 1)) == date(2026, 7, 31)
+
+
+def test_更新が複数回あっても基準日で選ばれる():
+    h = Holding(id="h", subject_id="p", requirement_id="men",
+                fixed_due_on=date(2021, 7, 31))
+    h.add_record(Record(done_on=date(2021, 6, 1), expiry_on=date(2026, 7, 31)))
+    h.add_record(Record(done_on=date(2026, 6, 1), expiry_on=date(2031, 7, 31)))
+
+    assert h.expiry_on_at(date(2021, 1, 1)) == date(2021, 7, 31)
+    assert h.expiry_on_at(date(2023, 1, 1)) == date(2026, 7, 31)
+    assert h.expiry_on_at(date(2027, 1, 1)) == date(2031, 7, 31)
+
+
+def test_有効期限の登録も訂正できる():
+    bad = Record(done_on=date(2026, 6, 1), expiry_on=date(2031, 7, 31))  # 桁違い
+    h = Holding(id="h", subject_id="p", requirement_id="men", records=[bad])
+    h.correct_record(bad.id, Record(done_on=date(2026, 6, 1),
+                                    expiry_on=date(2030, 7, 31)))
+    assert h.expiry_on_at(date(2026, 8, 1)) == date(2030, 7, 31)
+
+
+# --- 重複の禁止 -----------------------------------------------------------
+
+
+def test_同じ対象に同じ種類が2件あったら読み込みで止める():
+    """判定が「どちらか片方」になり、危ない方が捨てられる可能性がある。"""
+    lg = Ledger(
+        requirements=[_fixed_req()],
+        subjects=[Subject(id="p1", name="甲", kind="person")],
+        holdings=[Holding(id="h1", subject_id="p1", requirement_id="men",
+                          fixed_due_on=date(2026, 7, 1)),
+                  Holding(id="h2", subject_id="p1", requirement_id="men",
+                          fixed_due_on=date(2027, 7, 1))],
+    )
+    with pytest.raises(LedgerDataError):
+        Ledger.from_dict(lg.to_dict())
+
+
+def test_訂正の指し先が無ければ読み込みで止める():
+    h = Holding(id="h1", subject_id="p1", requirement_id="men",
+                records=[Record(done_on=date(2026, 6, 1), supersedes="ないid")])
+    with pytest.raises(LedgerDataError):
+        Holding.from_dict(h.to_dict())
+
+
+def test_対象の種別に知らない値があれば止める():
+    with pytest.raises(LedgerDataError):
+        Subject.from_dict({"id": "x", "name": "甲", "kind": "persno"})

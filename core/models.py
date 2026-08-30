@@ -11,14 +11,16 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date
-from typing import Any, Literal
+from typing import Any, Iterable, Literal
+from uuid import uuid4
 
 from core.schedule import latest_done, next_due
 
 __all__ = [
     "LedgerDataError",
+    "SUBJECT_KIND_LABEL",
     "Category",
     "DateMode",
     "Obligation",
@@ -44,6 +46,11 @@ OBLIGATION_LABEL: dict[str, str] = {
     "contract": "規格・契約",
     "effort": "努力義務",
     "none": "期限なし",
+}
+
+SUBJECT_KIND_LABEL: dict[str, str] = {
+    "person": "社員",
+    "asset": "道具・機器",
 }
 
 DATE_MODE_LABEL: dict[str, str] = {
@@ -201,7 +208,10 @@ class Subject:
         return cls(
             id=d["id"],
             name=d["name"],
-            kind=d.get("kind", "person"),
+            # 知らない値を通すと、社員でも道具でもない対象になり、
+            # どちらの一覧にも出ないまま台帳に残る。
+            kind=_one_of(_require(d, "kind", f"対象 {d.get('id', '?')!r}"),
+                         SUBJECT_KIND_LABEL, "kind", f"対象 {d.get('id', '?')!r}"),
             site=d.get("site", ""),
             role=d.get("role", ""),
             code=d.get("code", ""),
@@ -261,16 +271,48 @@ class Attachment:
 
 @dataclass(frozen=True)
 class Record:
-    """実施した事実。追記のみで、書き換えない。
+    """台帳に起きた事実。追記のみで、書き換えない。
 
     添付はこの記録に属する。台帳全体に 1 つだけ持つと、2021年の修了証と
     2026年の修了証を区別できず、蓄積する意味がなくなるため。
+
+    扱う事実は 2 種類ある。どちらも「いつの事実か」を done_on で持つ。
+
+    - 実施した（受講した・点検した）: done_on だけを持つ。
+      期日は前回実施日から周期で決まる。
+    - 新しい有効期限を受け取った: done_on に受け取った日、expiry_on にその期限。
+      免状や免許のように、期限が外から与えられるもの。
+
+    以前は有効期限を Holding に 1 つだけ持たせ、更新のたびに上書きしていた。
+    そうすると、更新した瞬間に過去の判定まで新しい期限で塗り替わり、
+    「2026年8月1日時点では切れていた」という事実が台帳から消えていた。
+    期限も事実として積む。
+
+    **訂正について。** 実施日を間違えて登録した場合、正しい日付でもう一度
+    記録しても直らない。最も新しい日付が採用されるため、誤って実際より
+    後の日付を入れていると、そちらが残って期限が実際より先に延びる。
+    そこで、訂正は supersedes に「どの記録を置き換えるか」を書いた新しい
+    記録として積む。元の記録は消さない。消せば監査のときに信用されない。
     """
 
     done_on: date
     done_by: str = ""
     memo: str = ""
     attachments: list[Attachment] = field(default_factory=list)
+
+    # 記録そのものを指すための識別子。訂正が「どれを置き換えたか」を
+    # 指せなければ、訂正のしようがない。
+    id: str = field(default_factory=lambda: uuid4().hex[:12])
+
+    # 有効期限を受け取った記録の場合だけ入る。
+    expiry_on: date | None = None
+
+    # この記録が置き換える記録の id。訂正でなければ None。
+    supersedes: str | None = None
+
+    @property
+    def is_expiry_update(self) -> bool:
+        return self.expiry_on is not None
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> Record:
@@ -284,14 +326,22 @@ class Record:
             done_by=d.get("done_by", ""),
             memo=d.get("memo", ""),
             attachments=[Attachment.from_dict(a) for a in d.get("attachments", [])],
+            # 古い保存データには id が無い。訂正は id を指すので、
+            # 読み込みの時点で必ず持たせる。
+            id=d.get("id") or uuid4().hex[:12],
+            expiry_on=_to_date(d.get("expiry_on")),
+            supersedes=d.get("supersedes") or None,
         )
 
     def to_dict(self) -> dict[str, Any]:
         return {
+            "id": self.id,
             "done_on": _from_date(self.done_on),
             "done_by": self.done_by,
             "memo": self.memo,
             "attachments": [a.to_dict() for a in self.attachments],
+            "expiry_on": _from_date(self.expiry_on),
+            "supersedes": self.supersedes,
         }
 
 
@@ -323,16 +373,51 @@ class Holding:
             self.records = tuple(self.records)
 
     @property
+    def superseded_ids(self) -> frozenset[str]:
+        """訂正によって置き換えられた記録の id。
+
+        置き換えられた記録は残すが、判定には使わない。
+        画面では「訂正済み」として見せる。消すと監査で追えなくなる。
+        """
+        return frozenset(r.supersedes for r in self.records if r.supersedes)
+
+    def effective_records(self, as_of: date | None = None) -> tuple[Record, ...]:
+        """判定に使う記録。訂正されたものを除く。
+
+        as_of を渡すと、その日までの事実だけを見る。
+        """
+        superseded = self.superseded_ids
+        return tuple(
+            r for r in self.records
+            if r.id not in superseded and (as_of is None or r.done_on <= as_of)
+        )
+
+    @property
     def last_done_on(self) -> date | None:
         """記録全体の中で最も新しい実施日。表示にだけ使う。
 
         判定には使わない。判定は基準日を伴うので last_done_on_at を使うこと。
         """
-        return latest_done(r.done_on for r in self.records)
+        return latest_done(r.done_on for r in self.effective_records())
 
     def last_done_on_at(self, as_of: date) -> date | None:
         """基準日までに実施されたものだけを見た、前回実施日。"""
-        return latest_done((r.done_on for r in self.records), as_of=as_of)
+        return latest_done(
+            (r.done_on for r in self.effective_records()), as_of=as_of
+        )
+
+    def expiry_on_at(self, as_of: date) -> date | None:
+        """基準日の時点で分かっていた有効期限。
+
+        免状を更新しても、更新前の日を基準にすれば更新前の期限が返る。
+        更新は「新しい証を受け取った」という新しい事実であって、
+        過去の証の期限が間違っていたわけではないため。
+        """
+        updates = [r for r in self.effective_records(as_of) if r.is_expiry_update]
+        if updates:
+            return max(updates, key=lambda r: r.done_on).expiry_on
+        # 更新の記録が無ければ、最初に登録された期限。
+        return self.fixed_due_on
 
     def due_on(self, requirement: Requirement, as_of: date) -> date | None:
         """次回期日。決められない場合は None を返し、推測で埋めない。
@@ -345,7 +430,9 @@ class Holding:
             return None
         if requirement.date_mode == "fixed":
             return next_due(
-                last_done_on=None, cycle_months=None, fixed_due_on=self.fixed_due_on
+                last_done_on=None,
+                cycle_months=None,
+                fixed_due_on=self.expiry_on_at(as_of),
             )
         return next_due(
             last_done_on=self.last_done_on_at(as_of),
@@ -356,9 +443,23 @@ class Holding:
         """記録を足す。消す手段は用意しない。
 
         過去を書き換えられる台帳は、監査のときに信用されない。
-        間違えた場合は、正しい日付でもう一度記録する。
+        間違えた場合は correct_record で訂正する。
         """
         self.records = (*self.records, record)
+
+    def correct_record(self, target_id: str, corrected: Record) -> None:
+        """既にある記録を、新しい記録で置き換える。
+
+        元の記録は残したまま、「これはもう使わない」と印を付ける形にする。
+        正しい日付をただ追記する方式では訂正にならない。誤って実際より後の
+        日付を入れていた場合、そちらが最新として残り、期限が実際より
+        先へ延びたままになる。
+        """
+        if not any(r.id == target_id for r in self.records):
+            raise LedgerDataError("訂正しようとした記録が見つかりません")
+        if target_id in self.superseded_ids:
+            raise LedgerDataError("この記録はすでに訂正されています")
+        self.add_record(replace(corrected, supersedes=target_id))
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> Holding:
@@ -367,7 +468,10 @@ class Holding:
             subject_id=d["subject_id"],
             requirement_id=d["requirement_id"],
             fixed_due_on=_to_date(d.get("fixed_due_on")),
-            records=tuple(Record.from_dict(r) for r in d.get("records", [])),
+            records=_checked_records(
+                [Record.from_dict(r) for r in d.get("records", [])],
+                where=f"保有 {d.get('id', '?')!r}",
+            ),
             note=d.get("note", ""),
             planned_on=_to_date(d.get("planned_on")),
         )
@@ -382,6 +486,57 @@ class Holding:
             "note": self.note,
             "planned_on": _from_date(self.planned_on),
         }
+
+
+def _checked_records(records: list[Record], *, where: str) -> tuple[Record, ...]:
+    """記録どうしの整合を確かめる。
+
+    訂正は記録の id を指すので、id が重複していたり、指した先が
+    存在しなかったりすると、どれを置き換えたのか決まらなくなる。
+    """
+    ids = [r.id for r in records]
+    if len(ids) != len(set(ids)):
+        raise LedgerDataError(f"{where}: 記録の id が重複しています")
+
+    known = set(ids)
+    for r in records:
+        if r.supersedes and r.supersedes not in known:
+            raise LedgerDataError(
+                f"{where}: 訂正の対象 {r.supersedes!r} にあたる記録がありません"
+            )
+        if r.supersedes == r.id:
+            raise LedgerDataError(f"{where}: 記録が自分自身を訂正しています")
+
+    targets = [r.supersedes for r in records if r.supersedes]
+    if len(targets) != len(set(targets)):
+        raise LedgerDataError(f"{where}: 同じ記録が二重に訂正されています")
+
+    return tuple(records)
+
+
+def _checked_holdings(holdings: list[Holding]) -> list[Holding]:
+    """保有どうしの整合を確かめる。
+
+    同じ対象に同じ種類が 2 件あると、判定が「どちらか片方」になる。
+    危ない方が捨てられると、期限切れが表示されないまま通る。
+    画面からは作れないが、壊れた保存データや将来の移行で起こりうるので、
+    読み込みの時点で止める。
+    """
+    seen: dict[tuple[str, str], str] = {}
+    for h in holdings:
+        key = (h.subject_id, h.requirement_id)
+        if key in seen:
+            raise LedgerDataError(
+                f"同じ対象に同じ種類が 2 件あります"
+                f"（対象={h.subject_id} 種類={h.requirement_id} "
+                f"保有={seen[key]} と {h.id}）"
+            )
+        seen[key] = h.id
+
+    ids = [h.id for h in holdings]
+    if len(ids) != len(set(ids)):
+        raise LedgerDataError("保有の id が重複しています")
+    return holdings
 
 
 @dataclass
@@ -461,7 +616,9 @@ class Ledger:
         return cls(
             requirements=[Requirement.from_dict(x) for x in d.get("requirements", [])],
             subjects=[Subject.from_dict(x) for x in d.get("subjects", [])],
-            holdings=[Holding.from_dict(x) for x in d.get("holdings", [])],
+            holdings=_checked_holdings(
+                [Holding.from_dict(x) for x in d.get("holdings", [])]
+            ),
             soon_days=d.get("soon_days", 30),
             upcoming_days=d.get("upcoming_days", 60),
             site_master=list(d.get("site_master", [])),

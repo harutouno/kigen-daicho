@@ -15,6 +15,7 @@ test_app_loads.py は構文が壊れていないことしか見ない。
 
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -154,3 +155,72 @@ def test_資格情報なしのカードが自分を打ち消さない():
         assert "対応が必要な項目はありません" not in text, (
             "「資格情報なし」と「対応が必要な項目はありません」が同時に出ている"
         )
+
+
+# --- 訂正と有効期限の更新 -------------------------------------------------
+
+
+def _holding_of(at, date_mode: str):
+    """同梱データから、指定した期限の決まり方の保有を1件選ぶ。"""
+    lg = at.session_state["ledger"]
+    for h in lg.holdings:
+        req = lg.requirement(h.requirement_id)
+        if req and req.date_mode == date_mode and h.records:
+            return lg, h
+    raise AssertionError(f"{date_mode} の記録つき保有が同梱データに無い")
+
+
+def test_実施記録を画面から訂正できる():
+    """正しい日付をただ追記しても直らない。訂正の導線が要る。"""
+    at = run(nav="社員の資格・健診")
+    lg, h = _holding_of(at, "cycle")
+    target = sorted(h.records, key=lambda r: r.done_on)[-1]
+    # 台帳はその場で書き換わるので、件数は先に控える。
+    # 同じオブジェクトを前後で比べても差は出ない。
+    before_count = len(h.records)
+
+    at.session_state["selected"] = h.subject_id
+    at.session_state["selected_holding"] = h.id
+    at.session_state["seen_record"] = target.id
+    at = at.run()
+    assert not at.exception, [str(e) for e in at.exception]
+
+    at.session_state[f"fix-date-{h.id}-{len(h.records)}"] = date(2025, 3, 3)
+    at = at.run()
+    btn = [b for b in at.button if b.key.startswith(f"btn-fix-{h.id}")]
+    assert btn, "訂正のボタンが無い"
+    at = btn[0].click().run()
+    assert not at.exception, [str(e) for e in at.exception]
+
+    lg = at.session_state["ledger"]
+    h2 = next(x for x in lg.holdings if x.id == h.id)
+    assert target.id in h2.superseded_ids, "訂正済みになっていない"
+    assert h2.last_done_on == date(2025, 3, 3)
+    assert len(h2.records) == before_count + 1, "元の記録が消えている"
+
+
+def test_有効期限の更新が過去の判定を書き換えない():
+    at = run(nav="社員の資格・健診")
+    lg = at.session_state["ledger"]
+    h = next(x for x in lg.holdings
+             if lg.requirement(x.requirement_id).date_mode == "fixed"
+             and x.fixed_due_on)
+    before = h.fixed_due_on
+
+    at.session_state["selected"] = h.subject_id
+    at.session_state["selected_holding"] = h.id
+    at = at.run()
+    at.session_state[f"detail-newdue-{h.id}"] = date(2035, 12, 31)
+    at = at.run()
+    btn = [b for b in at.button if b.key == "btn-detail-renew"]
+    assert btn, "期限を登録するボタンが無い"
+    at = btn[0].click().run()
+    assert not at.exception, [str(e) for e in at.exception]
+
+    lg = at.session_state["ledger"]
+    h2 = next(x for x in lg.holdings if x.id == h.id)
+    # 受け取った日（既定は今日）より前の判定は、元の期限のまま。
+    # 「その時点では切れていた」という事実を、あとから消さないため。
+    assert h2.expiry_on_at(date(2020, 1, 1)) == before
+    # 受け取った日より後は、新しい期限が効く。
+    assert h2.expiry_on_at(date(2035, 1, 1)) == date(2035, 12, 31)
