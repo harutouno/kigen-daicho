@@ -48,6 +48,11 @@ OBLIGATION_LABEL: dict[str, str] = {
     "none": "期限なし",
 }
 
+# 「台帳が知る限り最初から」を表す日。
+# 有効期限だけが分かっていて、いつ受け取った証かが分からない場合に使う。
+# 今日として扱うと、それ以前の判定がすべて「期限なし」に変わってしまう。
+LEDGER_BEGINNING = date.min
+
 SUBJECT_KIND_LABEL: dict[str, str] = {
     "person": "社員",
     "asset": "道具・機器",
@@ -74,6 +79,21 @@ def _require(d: dict[str, Any], key: str, where: str) -> Any:
     if key not in d or d[key] in (None, ""):
         raise LedgerDataError(f"{where}: 「{key}」がありません")
     return d[key]
+
+
+def _positive_int(value: Any, key: str, where: str) -> int | None:
+    """正の整数として読めることを確かめる。
+
+    cycle_months が "abc" でも読み込めてしまい、期限を計算する段になって
+    分かりにくい形で落ちていた。入口で検査する目的から外れている。
+    """
+    if value is None or value == "":
+        return None
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise LedgerDataError(f"{where}: 「{key}」は整数で指定してください（{value!r}）")
+    if value <= 0:
+        raise LedgerDataError(f"{where}: 「{key}」は 1 以上で指定してください（{value}）")
+    return value
 
 
 def _one_of(value: Any, allowed: dict[str, str], key: str, where: str) -> Any:
@@ -145,7 +165,7 @@ class Requirement:
         date_mode = _one_of(
             d.get("date_mode", "cycle"), DATE_MODE_LABEL, "date_mode", where
         )
-        cycle_months = d.get("cycle_months")
+        cycle_months = _positive_int(d.get("cycle_months"), "cycle_months", where)
         # 周期で計算すると書いてあるのに周期が無いと、期限を出せないまま
         # 「未確定」が並ぶ。原因が台帳の中身にあると気づきにくいので、ここで言う。
         if date_mode == "cycle" and not cycle_months:
@@ -356,6 +376,9 @@ class Holding:
     id: str
     subject_id: str
     requirement_id: str
+    # 古い保存データを読むための入口。読み込んだ時点で記録へ移し替え、
+    # そのあとは None になる。期限を Holding の属性としても記録としても
+    # 持てる状態にしておくと、どちらが正本か決まらない。
     fixed_due_on: date | None = None
     # タプルで持つ。「追記のみ」を決まりごとで守らせるのではなく、型で守らせる。
     # リストのままだと holding.records.clear() ができてしまい、
@@ -373,6 +396,25 @@ class Holding:
         if not isinstance(self.records, tuple):
             self._set_records(tuple(self.records))
 
+        # 有効期限を属性として渡された場合は、記録へ移し替える。
+        # 更新は記録として積むのに初回だけ属性、という二重構造にすると、
+        # 「有効期限の登録の履歴 0回」と出ているのに期限は表示される、
+        # という食い違いが起きる。事実は 1 か所に積む。
+        if self.fixed_due_on is not None:
+            self._set_records((
+                Record(
+                    # いつ受け取った証なのかは、この入口では分からない。
+                    # 分からないものを今日として扱うと、それ以前の判定が
+                    # すべて「期限なし」に変わってしまう。台帳が知る限り
+                    # 最初からある期限として置く。
+                    done_on=LEDGER_BEGINNING,
+                    expiry_on=self.fixed_due_on,
+                    memo="台帳に最初から登録されている期限",
+                ),
+                *self.records,
+            ))
+            object.__setattr__(self, "fixed_due_on", None)
+
     def __setattr__(self, name: str, value: Any) -> None:
         """記録の差し替えを外から行えないようにする。
 
@@ -381,9 +423,9 @@ class Holding:
         履歴を丸ごと落とせる状態が残っていた。
         足すのは add_record、直すのは correct_record を通す。
         """
-        if name == "records" and "records" in self.__dict__:
+        if name in ("records", "fixed_due_on") and "records" in self.__dict__:
             raise LedgerDataError(
-                "記録は差し替えられません。"
+                f"{name} は差し替えられません。"
                 "追加は add_record、訂正は correct_record を使ってください。"
             )
         super().__setattr__(name, value)
@@ -433,10 +475,9 @@ class Holding:
         過去の証の期限が間違っていたわけではないため。
         """
         updates = [r for r in self.effective_records(as_of) if r.is_expiry_update]
-        if updates:
-            return max(updates, key=lambda r: r.done_on).expiry_on
-        # 更新の記録が無ければ、最初に登録された期限。
-        return self.fixed_due_on
+        if not updates:
+            return None
+        return max(updates, key=lambda r: r.done_on).expiry_on
 
     def due_on(self, requirement: Requirement, as_of: date) -> date | None:
         """次回期日。決められない場合は None を返し、推測で埋めない。
@@ -464,6 +505,26 @@ class Holding:
         過去を書き換えられる台帳は、監査のときに信用されない。
         間違えた場合は correct_record で訂正する。
         """
+        if record.is_expiry_update:
+            # 同じ受取日で 2 件あると、どちらが後の登録か決められない。
+            # 記録は受取日の順で選ぶので、あとから短い期限を入れても
+            # 先に入れた長い方が残る。実測で 2029 を入れたのに 2030 が
+            # 残ることを確認している。期限を実際より延ばす方向に外れる。
+            #
+            # 登録順を持たせて解決する手もあるが、この台帳は
+            # 「いつの事実か」で並べる設計にしてある。順番を別に持つと、
+            # 判定の根拠が日付と登録順の 2 本立てになる。
+            # 間違いは訂正で直す、という筋を通す。
+            same_day = [
+                r for r in self.effective_records()
+                if r.is_expiry_update and r.done_on == record.done_on
+            ]
+            if same_day:
+                raise LedgerDataError(
+                    f"{record.done_on} の有効期限は登録済みです"
+                    f"（{same_day[0].expiry_on}）。"
+                    "入れ間違えた場合は、その記録を訂正してください。"
+                )
         self._set_records((*self.records, record))
 
     def correct_record(self, target_id: str, corrected: Record) -> None:
@@ -478,7 +539,9 @@ class Holding:
             raise LedgerDataError("訂正しようとした記録が見つかりません")
         if target_id in self.superseded_ids:
             raise LedgerDataError("この記録はすでに訂正されています")
-        self.add_record(replace(corrected, supersedes=target_id))
+        # 訂正は同じ受取日で入る。元の記録は置き換えられて有効でなくなるので、
+        # 同日 2 件にはならない。add_record の重複検査は通さない。
+        self._set_records((*self.records, replace(corrected, supersedes=target_id)))
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> Holding:
@@ -500,7 +563,8 @@ class Holding:
             "id": self.id,
             "subject_id": self.subject_id,
             "requirement_id": self.requirement_id,
-            "fixed_due_on": _from_date(self.fixed_due_on),
+            # fixed_due_on は書き出さない。読み込みの時点で記録へ移しており、
+            # 正本は records だけにしてある。
             "records": [r.to_dict() for r in self.records],
             "note": self.note,
             "planned_on": _from_date(self.planned_on),
@@ -530,7 +594,111 @@ def _checked_records(records: list[Record], *, where: str) -> tuple[Record, ...]
     if len(targets) != len(set(targets)):
         raise LedgerDataError(f"{where}: 同じ記録が二重に訂正されています")
 
+    # A が B を訂正し、B が A を訂正する、という形を止める。
+    # どちらも「訂正された記録」になり、有効な記録が 0 件になる。
+    # 実測で、そのまま読み込めて履歴が空になることを確認している。
+    by_id = {r.id: r for r in records}
+    for start in records:
+        seen = set()
+        cur = start
+        while cur is not None and cur.supersedes:
+            if cur.id in seen:
+                raise LedgerDataError(f"{where}: 訂正が循環しています（{cur.id}）")
+            seen.add(cur.id)
+            cur = by_id.get(cur.supersedes)
+
     return tuple(records)
+
+
+def _check_unique_ids(items: list[Any], what: str) -> None:
+    """内部 id が重複していないことを確かめる。
+
+    重複しても画面は落ちない。落ちないことが問題で、
+    id で引く処理はどれも「最初の 1 件」を返すため、2 件目は無いものとして
+    扱われる。種類の id が重なると、周期 12 か月の健康診断が、
+    たまたま先にある「有効期限なし」の種類として判定されうる。
+    実測で status=no_deadline になることを確認している。
+
+    期限を管理する対象が、警告からも一覧からも静かに消える。
+    画面が落ちるより悪い。
+    """
+    seen: set[str] = set()
+    for item in items:
+        if item.id in seen:
+            raise LedgerDataError(f"{what}の id が重複しています（id={item.id}）")
+        seen.add(item.id)
+
+
+def _check_references(
+    holdings: list[Holding], subjects: list[Subject], requirements: list[Requirement]
+) -> None:
+    """保有が指している対象と種類が実在することを確かめる。
+
+    指し先が無いことに気づくのが判定の途中だと、どのデータが原因か
+    分かりにくい。読み込みの時点で、どの保有が何を指し損ねているかを言う。
+    """
+    subject_ids = {s.id for s in subjects}
+    requirement_ids = {r.id for r in requirements}
+    for h in holdings:
+        if h.subject_id not in subject_ids:
+            raise LedgerDataError(
+                f"保有 {h.id!r} が指している対象 {h.subject_id!r} がありません"
+            )
+        if h.requirement_id not in requirement_ids:
+            raise LedgerDataError(
+                f"保有 {h.id!r} が指している種類 {h.requirement_id!r} がありません"
+            )
+
+
+def _check_codes(subjects: list[Subject]) -> None:
+    """社員番号・管理番号が重なっていないことを確かめる。
+
+    道具は名前では特定できない。「絶縁手袋」は何組もあるので、
+    現物にたどり着くには管理番号が要る。番号が重なっていると、
+    別の現物の点検記録を見て「この手袋は問題ない」と判断しうる。
+    画面の登録では確認しているが、保存データ側では見ていなかった。
+    """
+    seen: dict[tuple[str, str], str] = {}
+    for s in subjects:
+        if not s.code:
+            continue
+        key = (s.kind, s.code)
+        if key in seen:
+            what = "管理番号" if s.kind == "asset" else "社員番号"
+            raise LedgerDataError(
+                f"{what} {s.code!r} が重複しています"
+                f"（{seen[key]} と {s.id}）"
+            )
+        seen[key] = s.id
+
+
+def _check_record_kinds(
+    holdings: list[Holding], requirements: list[Requirement]
+) -> None:
+    """記録の種類が、その種別の期限の決まり方と合っているかを確かめる。
+
+    Record は「実施した」と「有効期限を受け取った」の 2 つを兼ねており、
+    expiry_on の有無で見分けている。周期で決まる種別に expiry_on 入りの
+    記録が混ざっていると、それを実施日として扱って期限を計算してしまう。
+    実測で、証の期限更新の記録が健康診断の実施として扱われ、
+    「問題なし」になることを確認している。
+    """
+    by_id = {r.id: r for r in requirements}
+    for h in holdings:
+        req = by_id.get(h.requirement_id)
+        if req is None:
+            continue
+        for rec in h.records:
+            if req.date_mode == "cycle" and rec.is_expiry_update:
+                raise LedgerDataError(
+                    f"保有 {h.id!r}（{req.name}）は周期で期限が決まる種別ですが、"
+                    "有効期限つきの記録が入っています"
+                )
+            if req.date_mode == "fixed" and not rec.is_expiry_update:
+                raise LedgerDataError(
+                    f"保有 {h.id!r}（{req.name}）は有効期限を直接持つ種別ですが、"
+                    "有効期限の無い記録が入っています"
+                )
 
 
 def _checked_holdings(holdings: list[Holding]) -> list[Holding]:
@@ -632,14 +800,27 @@ class Ledger:
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> Ledger:
+        requirements = [Requirement.from_dict(x) for x in d.get("requirements", [])]
+        subjects = [Subject.from_dict(x) for x in d.get("subjects", [])]
+        holdings = _checked_holdings(
+            [Holding.from_dict(x) for x in d.get("holdings", [])]
+        )
+
+        # 台帳全体としての整合は、読み込みの時点で確かめる。
+        # 判定まで進んでから気づくと、どのデータが原因か分かりにくい。
+        _check_unique_ids(requirements, "種類")
+        _check_unique_ids(subjects, "対象")
+        _check_codes(subjects)
+        _check_references(holdings, subjects, requirements)
+        _check_record_kinds(holdings, requirements)
+
         return cls(
-            requirements=[Requirement.from_dict(x) for x in d.get("requirements", [])],
-            subjects=[Subject.from_dict(x) for x in d.get("subjects", [])],
-            holdings=_checked_holdings(
-                [Holding.from_dict(x) for x in d.get("holdings", [])]
-            ),
-            soon_days=d.get("soon_days", 30),
-            upcoming_days=d.get("upcoming_days", 60),
+            requirements=requirements,
+            subjects=subjects,
+            holdings=holdings,
+            soon_days=_positive_int(d.get("soon_days", 30), "soon_days", "台帳") or 30,
+            upcoming_days=_positive_int(
+                d.get("upcoming_days", 60), "upcoming_days", "台帳") or 60,
             site_master=list(d.get("site_master", [])),
             role_master={k: list(v) for k, v in d.get("role_master", {}).items()},
         )

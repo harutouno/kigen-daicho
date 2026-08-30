@@ -202,10 +202,11 @@ def test_実施記録を画面から訂正できる():
 def test_有効期限の更新が過去の判定を書き換えない():
     at = run(nav="社員の資格・健診")
     lg = at.session_state["ledger"]
+    today = date.today()
     h = next(x for x in lg.holdings
              if lg.requirement(x.requirement_id).date_mode == "fixed"
-             and x.fixed_due_on)
-    before = h.fixed_due_on
+             and x.expiry_on_at(today))
+    before = h.expiry_on_at(today)
 
     at.session_state["selected"] = h.subject_id
     at.session_state["selected_holding"] = h.id
@@ -224,3 +225,22 @@ def test_有効期限の更新が過去の判定を書き換えない():
     assert h2.expiry_on_at(date(2020, 1, 1)) == before
     # 受け取った日より後は、新しい期限が効く。
     assert h2.expiry_on_at(date(2035, 1, 1)) == date(2035, 12, 31)
+
+
+def test_台帳に最初からある期限の記録を開ける():
+    """date.min を日付入力の初期値に渡すと、Streamlit が選べる範囲を
+    10年前まで広げようとして例外になる。画面を開いた時点で落ちていた。
+
+    テストが周期型の記録しか開いていなかったため、気づけなかった。
+    """
+    at = run(nav="社員の資格・健診")
+    lg = at.session_state["ledger"]
+    h = next(x for x in lg.holdings
+             if lg.requirement(x.requirement_id).date_mode == "fixed" and x.records)
+    initial = h.records[0]
+
+    at.session_state["selected"] = h.subject_id
+    at.session_state["selected_holding"] = h.id
+    at.session_state["seen_record"] = initial.id
+    at = at.run()
+    assert not at.exception, [str(e) for e in at.exception]

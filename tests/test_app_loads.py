@@ -55,7 +55,7 @@ def test_画面がドメイン層のどこを使っているか():
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
     }
 
-    for name in ("build_rows", "summarize_by_subject", "submission_check"):
+    for name in ("build_rows", "summarize_by_subject", "preflight_check"):
         assert name in called, f"app.py が {name} を呼んでいません"
 
 

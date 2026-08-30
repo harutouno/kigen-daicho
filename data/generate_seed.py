@@ -15,8 +15,15 @@
 from __future__ import annotations
 
 import json
+import sys
 from datetime import date, timedelta
 from pathlib import Path
+
+# python data/generate_seed.py と直接叩けるようにする。
+# リポジトリ直下がパスに入らないため、core を読めない。
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from core.schedule import business_today  # noqa: E402
 
 OUT = Path(__file__).resolve().parent / "seed.json"
 
@@ -25,7 +32,7 @@ OUT = Path(__file__).resolve().parent / "seed.json"
 # 固定の日付を書き込むと、時間が経つほど「期限間近」の人が全員「期限切れ」へ
 # 移っていき、デモとして意図した見え方が崩れる。見せる直前にこの生成を
 # 走らせれば、いつでも同じ配分になる。
-TODAY = date.today()
+TODAY = business_today()
 
 # 拠点名は架空。実在の会社の事業所一覧と一致させないこと。
 # 一致していると、社名を書かなくてもどの会社の話か分かってしまう。

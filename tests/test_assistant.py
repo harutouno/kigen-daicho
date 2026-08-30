@@ -112,11 +112,99 @@ def test_記録が無い人はその旨を答える():
 
 
 def test_日数を指定した照会ができる():
+    """件数だけを見ていたため、まったく別の行を返しても通っていた。
+
+    「30日以内に切れるものは？」には「切れ」が入っているので、
+    期限切れの照会に先に捕まり、12日後の健診ではなく期限切れの
+    資格者証を返していた。期限切れも1件、30日以内も1件だったので、
+    件数の一致だけでは気づけなかった。
+
+    どの行を返したかまで見る。
+    """
     lg = make_ledger()
     a = answer(lg, "30日以内に切れるものは？", TODAY)
+
     assert a.kind == "query"
-    # 健診の期日は 2026-09-10（12日後）なので入る
     assert len(a.rows) == 1
+    row = a.rows[0]
+    assert row.holding.id == "h2"                     # 健診であること
+    assert row.requirement.name == "定期健康診断"
+    assert row.status == "due_soon"                   # 期限切れではないこと
+    assert row.due_on == date(2026, 9, 10)
+
+
+def test_期限切れの照会と日数指定の照会が別物であること():
+    """同じ台帳で、返る行が実際に違うことを確かめる。"""
+    lg = make_ledger()
+    overdue = answer(lg, "期限が切れているものは？", TODAY)
+    within = answer(lg, "30日以内に切れるものは？", TODAY)
+
+    assert [r.holding.id for r in overdue.rows] == ["h1"]
+    assert [r.holding.id for r in within.rows] == ["h2"]
+
+
+def test_今月は30日以内と同じ意味ではない():
+    """8月30日に「今月」と聞かれたら 8月31日までを指す。
+
+    以前は soon_days（30日）に読み替えていた。それでは9月末までになる。
+    """
+    lg = make_ledger()
+    a = answer(lg, "今月切れるものは？", TODAY)
+
+    assert a.kind == "query"
+    assert "2026-08-31" in a.headline
+    # 健診の期日は 9月10日なので、今月には入らない
+    assert a.rows == []
+
+
+def test_期限切れの照会も種別で絞る():
+    """「期限切れの人」に道具が混ざっていた。
+
+    種別の絞り込みを分岐ごとに書いていたため、直した分岐だけ効いていた。
+    """
+    lg = make_ledger()
+    lg.subjects.append(Subject(id="a1", name="絶縁手袋", kind="asset", code="G-1"))
+    lg.holdings.append(Holding(id="h9", subject_id="a1", requirement_id="cert",
+                               fixed_due_on=date(2026, 1, 1)))   # 期限切れ
+
+    both = answer(lg, "期限が切れているものは？", TODAY)
+    assert {r.subject.kind for r in both.rows} == {"person", "asset"}
+
+    people = answer(lg, "期限切れの人を教えて", TODAY)
+    assert {r.subject.kind for r in people.rows} == {"person"}
+
+    assets = answer(lg, "期限切れの道具を教えて", TODAY)
+    assert {r.subject.kind for r in assets.rows} == {"asset"}
+
+
+def test_提出日の件数が提出前チェックと同じ計算から出る():
+    """AI だけ独自に足し算していた。前に画面14件・README12件になった構造。"""
+    from core.review import preflight_check
+
+    lg = make_ledger()
+    lg.subjects.append(Subject(id="p9", name="新入 太郎", kind="person"))
+
+    a = answer(lg, "2027年3月31日に提出したら何が引っかかる？", TODAY)
+    expected = preflight_check(lg, target_date=date(2027, 3, 31))
+
+    assert str(expected.blocked) in a.headline
+    assert len(a.rows) == len(expected.issues)
+    assert len(a.subjects) == len(expected.unrecorded)
+
+
+def test_提出日の照会も種別で絞る():
+    from core.review import preflight_check
+
+    lg = make_ledger()
+    lg.subjects.append(Subject(id="a1", name="絶縁手袋", kind="asset", code="G-1"))
+
+    a = answer(lg, "2027年3月31日に社員の書類を提出したら？", TODAY)
+    expected = preflight_check(
+        lg, target_date=date(2027, 3, 31),
+        subject_ids=[s.id for s in lg.subjects if s.kind == "person"],
+    )
+    assert str(expected.blocked) in a.headline
+    assert all(s.kind == "person" for s in a.subjects)
 
 
 # --- 案内は行き先を指す ---------------------------------------------------

@@ -20,6 +20,7 @@ from datetime import date
 import streamlit as st
 
 from core.models import (
+    LEDGER_BEGINNING,
     LedgerDataError,
     CATEGORY_LABEL,
     DATE_MODE_LABEL,
@@ -797,8 +798,19 @@ def draw_holding_detail(kind: str) -> None:
         for i, rec in enumerate(ordered, start=1):
             cols = st.columns(widths)
             done = rec.id in superseded
-            cols[0].write(f"~~{i}回目~~" if done else f"{i}回目")
-            cols[1].write(jp_date(rec.done_on) + ("（訂正済み）" if done else ""))
+            from_start = rec.done_on == LEDGER_BEGINNING
+            # 訂正の記録は「何回目」ではない。受講回数と取り違えられる。
+            if rec.supersedes:
+                label = "訂正"
+            elif from_start:
+                label = "初回"
+            else:
+                label = f"{i}回目"
+            cols[0].write(f"~~{label}~~" if done else label)
+            cols[1].write(
+                ("台帳に登録された時点" if from_start else jp_date(rec.done_on))
+                + ("（訂正済み）" if done else "")
+            )
             if rec.is_expiry_update:
                 cols[2].write(jp_date(rec.expiry_on))
             elif req.date_mode == "cycle" and req.cycle_months:
@@ -942,12 +954,17 @@ def draw_record_detail(holding, req, ordered: list) -> None:
             return
 
         head, close = st.columns([4, 1])
-        head.markdown(f"**{number}回目　{jp_date(target.done_on)}**")
+        head.markdown(
+            "**訂正の記録**" if target.supersedes
+            else "**初回　台帳に登録された時点**" if target.done_on == LEDGER_BEGINNING
+            else f"**{number}回目　{jp_date(target.done_on)}**"
+        )
         if close.button("閉じる", key="btn-close-record", width="stretch"):
             st.session_state.pop("seen_record", None)
             st.rerun()
 
         corrected = target.id in holding.superseded_ids
+        from_beginning = target.done_on == LEDGER_BEGINNING
         if corrected:
             replacement = next(
                 (r for r in holding.records if r.supersedes == target.id), None
@@ -996,47 +1013,59 @@ def draw_record_detail(holding, req, ordered: list) -> None:
             # 最も新しい日付が採用されるので、誤って実際より後の日付を入れて
             # いると、そちらが残って期限が実際より先へ延びる。
             # 元の記録は消さず、置き換えとして積む。
-            with st.expander("この記録の日付を間違えた場合"):
+            # 折りたたまない。隠れている機能は無いのと同じで、
+            # 訂正はまさに「探しても見つからないと困る」操作である。
+            # 一度ここを expander にしてしまい、自分で書いた原則を破っていた。
+            st.divider()
+            st.markdown("**この記録を訂正する**")
+            st.caption(
+                "日付を間違えた場合、正しい日付でもう一度記録しても直りません。"
+                "新しい方の日付が使われてしまうためです。ここから訂正してください。"
+                "元の記録は消えず、「訂正済み」として残ります。"
+            )
+            # 台帳に最初からある記録には、受け取った日が入っていない。
+            # date.min をそのまま初期値に渡すと、Streamlit が選べる範囲を
+            # 10年前まで広げようとして例外になる。画面を開いた時点で落ちた。
+            if from_beginning:
                 st.caption(
-                    "正しい日付でもう一度記録しても直りません。"
-                    "新しい方の日付が使われてしまうためです。ここから訂正してください。"
-                    "元の記録は消えず、「訂正済み」として残ります。"
+                    "この記録には受け取った日が入っていません。"
+                    "証を確認した日を入れると、それ以前は「未確定」として扱われます。"
                 )
-                fixed_on = st.date_input(
-                    "正しい" + ("受け取った日" if target.is_expiry_update else "実施した日"),
-                    value=target.done_on,
-                    key=f"fix-date-{holding.id}-{number}",
+            fixed_on = st.date_input(
+                "正しい" + ("受け取った日" if target.is_expiry_update else "実施した日"),
+                value=today if from_beginning else target.done_on,
+                key=f"fix-date-{holding.id}-{number}",
+            )
+            fixed_expiry = None
+            if target.is_expiry_update:
+                fixed_expiry = st.date_input(
+                    "正しい有効期限",
+                    value=target.expiry_on,
+                    key=f"fix-expiry-{holding.id}-{number}",
                 )
-                fixed_expiry = None
-                if target.is_expiry_update:
-                    fixed_expiry = st.date_input(
-                        "正しい有効期限",
-                        value=target.expiry_on,
-                        key=f"fix-expiry-{holding.id}-{number}",
+            reason = st.text_input(
+                "訂正の理由", value="", placeholder="例）修了証を見て確認しました",
+                key=f"fix-memo-{holding.id}-{number}",
+            )
+            if st.button("この内容に訂正する", key=f"btn-fix-{holding.id}-{number}"):
+                try:
+                    validate_done_on(fixed_on, today)
+                    holding.correct_record(target.id, Record(
+                        done_on=fixed_on,
+                        done_by=target.done_by,
+                        memo=reason or "訂正",
+                        expiry_on=fixed_expiry,
+                        attachments=list(target.attachments),
+                    ))
+                except (ScheduleError, LedgerDataError) as e:
+                    st.error(str(e), icon="⚠️")
+                else:
+                    st.session_state.pop("seen_record", None)
+                    st.session_state["_flash"] = (
+                        f"{jp_date(target.done_on)} の記録を "
+                        f"{jp_date(fixed_on)} に訂正しました。"
                     )
-                reason = st.text_input(
-                    "訂正の理由", value="", placeholder="例）修了証を見て確認しました",
-                    key=f"fix-memo-{holding.id}-{number}",
-                )
-                if st.button("この内容に訂正する", key=f"btn-fix-{holding.id}-{number}"):
-                    try:
-                        validate_done_on(fixed_on, today)
-                        holding.correct_record(target.id, Record(
-                            done_on=fixed_on,
-                            done_by=target.done_by,
-                            memo=reason or "訂正",
-                            expiry_on=fixed_expiry,
-                            attachments=list(target.attachments),
-                        ))
-                    except (ScheduleError, LedgerDataError) as e:
-                        st.error(str(e), icon="⚠️")
-                    else:
-                        st.session_state.pop("seen_record", None)
-                        st.session_state["_flash"] = (
-                            f"{jp_date(target.done_on)} の記録を "
-                            f"{jp_date(fixed_on)} に訂正しました。"
-                        )
-                        st.rerun()
+                    st.rerun()
 
         st.file_uploader(
             "この回の控えを追加する",
@@ -1148,17 +1177,23 @@ def draw_add_form(subject, rows: list[Row], is_asset: bool) -> None:
                     st.error(str(e))
                     return
 
-            records = (
-                [Record(done_on=last_done, done_by="", memo="登録時に入力")]
-                if last_done is not None
-                else []
-            )
+            records = []
+            if last_done is not None:
+                records.append(
+                    Record(done_on=last_done, done_by="", memo="登録時に入力")
+                )
+            if fixed_due is not None:
+                # 有効期限も記録として積む。Holding の属性として持つと、
+                # 初回だけ履歴に出ない、あとから上書きできる、という
+                # 二重構造になる。ここで入れた日を「確認した日」として残す。
+                records.append(
+                    Record(done_on=today, expiry_on=fixed_due, memo="登録時に入力")
+                )
             lg.holdings.append(
                 Holding(
                     id=f"h-{uuid.uuid4().hex[:12]}",
                     subject_id=subject.id,
                     requirement_id=req.id,
-                    fixed_due_on=fixed_due,
                     records=records,
                 )
             )

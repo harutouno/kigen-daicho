@@ -288,3 +288,214 @@ def test_記録を丸ごと差し替えられない():
     # 決められた入口からは足せる
     h.add_record(Record(done_on=date(2026, 2, 1)))
     assert len(h.records) == 2
+
+
+# --- 台帳全体の整合 -------------------------------------------------------
+#
+# id が重複しても画面は落ちない。落ちないことが問題で、id で引く処理は
+# どれも「最初の1件」を返すため、2件目は無いものとして扱われる。
+# 実測で、周期12か月の健康診断が、たまたま先にある「有効期限なし」の
+# 種類として判定され status=no_deadline になることを確認している。
+
+
+def _ledger_dict(**over) -> dict:
+    base = {
+        "requirements": [{"id": "k", "name": "健診", "category": "qualification",
+                          "obligation": "legal", "date_mode": "cycle",
+                          "cycle_months": 12}],
+        "subjects": [{"id": "p1", "name": "甲", "kind": "person"}],
+        "holdings": [{"id": "h1", "subject_id": "p1", "requirement_id": "k"}],
+    }
+    base.update(over)
+    return base
+
+
+def test_種類のidが重複したら止める():
+    d = _ledger_dict(requirements=[
+        {"id": "r", "name": "免状", "category": "qualification",
+         "obligation": "legal", "date_mode": "none"},
+        {"id": "r", "name": "健診", "category": "qualification",
+         "obligation": "legal", "date_mode": "cycle", "cycle_months": 12},
+    ], holdings=[{"id": "h1", "subject_id": "p1", "requirement_id": "r"}])
+    with pytest.raises(LedgerDataError):
+        Ledger.from_dict(d)
+
+
+def test_対象のidが重複したら止める():
+    d = _ledger_dict(subjects=[
+        {"id": "p1", "name": "甲", "kind": "person"},
+        {"id": "p1", "name": "乙", "kind": "person"},
+    ])
+    with pytest.raises(LedgerDataError):
+        Ledger.from_dict(d)
+
+
+def test_保有が指す対象が無ければ止める():
+    d = _ledger_dict(holdings=[{"id": "h1", "subject_id": "いない",
+                                "requirement_id": "k"}])
+    with pytest.raises(LedgerDataError):
+        Ledger.from_dict(d)
+
+
+def test_保有が指す種類が無ければ止める():
+    d = _ledger_dict(holdings=[{"id": "h1", "subject_id": "p1",
+                                "requirement_id": "ない"}])
+    with pytest.raises(LedgerDataError):
+        Ledger.from_dict(d)
+
+
+def test_管理番号が重複したら止める():
+    """道具は名前では特定できない。番号が重なると、別の現物の点検記録を見て
+    「この手袋は問題ない」と判断しうる。"""
+    d = _ledger_dict(
+        subjects=[{"id": "a1", "name": "絶縁手袋", "kind": "asset", "code": "G-001"},
+                  {"id": "a2", "name": "絶縁手袋2", "kind": "asset", "code": "G-001"}],
+        holdings=[],
+    )
+    with pytest.raises(LedgerDataError):
+        Ledger.from_dict(d)
+
+
+def test_番号が空なら重複とみなさない():
+    d = _ledger_dict(
+        subjects=[{"id": "p1", "name": "甲", "kind": "person", "code": ""},
+                  {"id": "p2", "name": "乙", "kind": "person", "code": ""}],
+        holdings=[],
+    )
+    assert len(Ledger.from_dict(d).subjects) == 2
+
+
+def test_社員と道具で同じ番号は許す():
+    """番号の体系が別なので、たまたま同じでも別物を指す。"""
+    d = _ledger_dict(
+        subjects=[{"id": "p1", "name": "甲", "kind": "person", "code": "X-1"},
+                  {"id": "a1", "name": "手袋", "kind": "asset", "code": "X-1"}],
+        holdings=[],
+    )
+    assert len(Ledger.from_dict(d).subjects) == 2
+
+
+# --- 同じ日に有効期限を2回登録しない ---------------------------------------
+
+
+def test_同じ日に有効期限を二重登録できない():
+    """記録は受取日の順で選ぶので、あとから短い期限を入れても
+    先に入れた長い方が残る。実測で 2029 を入れたのに 2030 が残った。
+    期限を実際より延ばす方向に外れる。
+    """
+    h = Holding(id="h", subject_id="p", requirement_id="men")
+    h.add_record(Record(done_on=date(2026, 8, 1), expiry_on=date(2030, 7, 31)))
+
+    with pytest.raises(LedgerDataError):
+        h.add_record(Record(done_on=date(2026, 8, 1), expiry_on=date(2029, 7, 31)))
+
+
+def test_入れ間違えた有効期限は訂正で直せる():
+    """二重登録を断るだけでは行き止まりになる。直す道を残す。"""
+    h = Holding(id="h", subject_id="p", requirement_id="men")
+    wrong = Record(done_on=date(2026, 8, 1), expiry_on=date(2030, 7, 31))
+    h.add_record(wrong)
+    h.correct_record(wrong.id, Record(done_on=date(2026, 8, 1),
+                                      expiry_on=date(2029, 7, 31)))
+    assert h.expiry_on_at(date(2026, 9, 1)) == date(2029, 7, 31)
+
+
+def test_別の日なら続けて登録できる():
+    h = Holding(id="h", subject_id="p", requirement_id="men")
+    h.add_record(Record(done_on=date(2021, 6, 1), expiry_on=date(2026, 7, 31)))
+    h.add_record(Record(done_on=date(2026, 6, 1), expiry_on=date(2031, 7, 31)))
+    assert h.expiry_on_at(date(2027, 1, 1)) == date(2031, 7, 31)
+
+
+# --- 有効期限も記録として持つ ---------------------------------------------
+
+
+def test_初回の有効期限も履歴に載る():
+    """更新は記録なのに初回だけ属性、という二重構造だった。
+
+    そのせいで「有効期限の登録の履歴 0回」と出ているのに
+    期限は表示される、という食い違いが起きていた。
+    """
+    h = Holding(id="h", subject_id="p", requirement_id="men",
+                fixed_due_on=date(2027, 4, 1))
+
+    assert h.fixed_due_on is None            # 記録へ移し替えられている
+    assert len(h.records) == 1
+    assert h.records[0].expiry_on == date(2027, 4, 1)
+    assert h.expiry_on_at(date(2026, 8, 30)) == date(2027, 4, 1)
+
+
+def test_保存して読み直しても期限が残る():
+    h = Holding(id="h", subject_id="p", requirement_id="men",
+                fixed_due_on=date(2027, 4, 1))
+    back = Holding.from_dict(h.to_dict())
+    assert back.expiry_on_at(date(2026, 8, 30)) == date(2027, 4, 1)
+    assert "fixed_due_on" not in h.to_dict()
+
+
+def test_有効期限を外から書き換えられない():
+    """記録として積む仕組みを作っても、属性を直接書き換えられるなら
+    以前の「過去が消える」問題を再現できてしまう。"""
+    h = Holding(id="h", subject_id="p", requirement_id="men",
+                fixed_due_on=date(2027, 4, 1))
+    with pytest.raises(LedgerDataError):
+        h.fixed_due_on = date(2035, 1, 1)
+
+
+# --- 記録の種類と種別の整合 -----------------------------------------------
+
+
+def test_周期の種別に有効期限つきの記録を入れさせない():
+    """証の期限更新の記録が、健康診断の実施として扱われていた。
+    実測では「問題なし」になった。"""
+    d = _ledger_dict(holdings=[{
+        "id": "h1", "subject_id": "p1", "requirement_id": "k",
+        "records": [{"done_on": "2026-08-20", "expiry_on": "2099-01-01"}],
+    }])
+    with pytest.raises(LedgerDataError):
+        Ledger.from_dict(d)
+
+
+def test_有効期限の種別に期限なしの記録を入れさせない():
+    d = _ledger_dict(
+        requirements=[{"id": "men", "name": "運転免許証",
+                       "category": "qualification", "obligation": "legal",
+                       "date_mode": "fixed"}],
+        holdings=[{"id": "h1", "subject_id": "p1", "requirement_id": "men",
+                   "records": [{"done_on": "2026-08-20"}]}],
+    )
+    with pytest.raises(LedgerDataError):
+        Ledger.from_dict(d)
+
+
+# --- 訂正の循環 -----------------------------------------------------------
+
+
+def test_訂正が循環していたら止める():
+    """どちらも「訂正された記録」になり、有効な記録が0件になる。"""
+    a = Record(done_on=date(2026, 1, 1), id="A", supersedes="B")
+    b = Record(done_on=date(2026, 2, 1), id="B", supersedes="A")
+    h = Holding(id="h", subject_id="p", requirement_id="k", records=[a, b])
+    with pytest.raises(LedgerDataError):
+        Holding.from_dict(h.to_dict())
+
+
+def test_三つ以上の循環も止める():
+    a = Record(done_on=date(2026, 1, 1), id="A", supersedes="C")
+    b = Record(done_on=date(2026, 2, 1), id="B", supersedes="A")
+    c = Record(done_on=date(2026, 3, 1), id="C", supersedes="B")
+    h = Holding(id="h", subject_id="p", requirement_id="k", records=[a, b, c])
+    with pytest.raises(LedgerDataError):
+        Holding.from_dict(h.to_dict())
+
+
+def test_一直線の訂正は通る():
+    """A を B が訂正し、その B を C が訂正するのは正しい形。"""
+    a = Record(done_on=date(2026, 1, 1), id="A")
+    b = Record(done_on=date(2026, 2, 1), id="B", supersedes="A")
+    c = Record(done_on=date(2026, 3, 1), id="C", supersedes="B")
+    h = Holding.from_dict(
+        Holding(id="h", subject_id="p", requirement_id="k",
+                records=[a, b, c]).to_dict()
+    )
+    assert [r.id for r in h.effective_records()] == ["C"]

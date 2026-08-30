@@ -19,6 +19,7 @@
 
 from __future__ import annotations
 
+import calendar
 import re
 from dataclasses import dataclass, field
 from datetime import date, timedelta
@@ -27,6 +28,7 @@ from core.models import Ledger, Subject
 from core.schedule import add_months
 from core.review import (
     Row,
+    preflight_check,
     build_rows,
     submission_check,
     summarize_by_subject,
@@ -117,6 +119,24 @@ def _asked_kind(text: str) -> str | None:
     if _has(text, "人", "社員", "従業員", "資格情報", "職員"):
         return "person"
     return None
+
+
+def _scope_ids(ledger: Ledger, kind: str | None) -> list[str] | None:
+    """聞かれた種別に当てはまる対象の id。種別が決まらなければ None。"""
+    if kind is None:
+        return None
+    return [s.id for s in ledger.subjects if s.kind == kind]
+
+
+def _scoped_rows(ledger: Ledger, today: date, kind: str | None) -> list[Row]:
+    """聞かれた種別だけの行。
+
+    照会のたびに絞り込みを書くと、書き忘れた分岐だけ混ざる。
+    """
+    rows = build_rows(ledger, today)
+    if kind is None:
+        return rows
+    return [r for r in rows if r.subject.kind == kind]
 
 
 def _find_subjects(ledger: Ledger, text: str) -> list[Subject]:
@@ -246,7 +266,9 @@ def answer(
             lines=[
                 "周期（何か月ごとか）を種類ごとに変えられます",
                 "「期限間近」とする日数も変えられます",
-                "変えた値はすぐに一覧と提出前チェックに反映されます",
+                "「期限間近」の日数を変えると、一覧で間近と出る範囲が変わります",
+            "提出前チェックが止めるのは期限切れと期日未確定なので、"
+            "この日数を変えても提出できるかどうかは変わりません",
             ],
             highlight="nav",
         )
@@ -264,11 +286,20 @@ def answer(
             ],
         )
 
+    # 社員のことか道具のことかは、最初に一度だけ決めて全部の照会で使う。
+    # 分岐ごとに判断すると、直した分岐だけ効いて他は混ざったままになる。
+    # 実際、記録が無い対象の照会にだけ入れていたため、
+    # 「期限切れの人を教えて」に道具が混ざったままだった。
+    asked_kind = _asked_kind(text)
+    scope = _scope_ids(ledger, asked_kind)
+    what = {"person": "社員", "asset": "道具・機器", None: "対象"}[asked_kind]
+
     target_date = _parse_date(text, today)
     if target_date is not None and _has(text, "提出", "工期", "出す", "出したら"):
-        issues = submission_check(ledger, target_date=target_date)
-        blank = unrecorded_subjects(ledger)
-        if not issues and not blank:
+        # 件数は preflight_check だけから出す。ここで足し算をすると、
+        # 画面と違う数字を答える。前にそれで画面14件・README12件になった。
+        result = preflight_check(ledger, target_date=target_date, subject_ids=scope)
+        if result.is_clear:
             return Answer(
                 kind="query",
                 headline=f"{target_date} に提出しても、引っかかるものはありません。",
@@ -276,12 +307,11 @@ def answer(
         return Answer(
             kind="query",
             headline=(
-                f"{target_date} に提出すると、{len(issues) + len(blank)}件が"
-                "引っかかります。"
+                f"{target_date} に提出すると、{result.blocked}件が引っかかります。"
             ),
             lines=["「安全書類の提出前チェック」で同じ結果を画面でも確認できます。"],
-            rows=issues,
-            subjects=blank,
+            rows=result.issues,
+            subjects=result.unrecorded,
         )
 
     found = _find_subjects(ledger, text)
@@ -325,9 +355,7 @@ def answer(
 
     if _has(text, "資格情報", "点検情報", "登録されていない", "何も無い", "未登録"):
         # 「人は？」と聞かれて道具を混ぜない。件数がそのまま食い違う。
-        kind = _asked_kind(text)
-        blank = unrecorded_subjects(ledger, kind=kind)
-        what = {"person": "社員", "asset": "道具・機器", None: "対象"}[kind]
+        blank = unrecorded_subjects(ledger, kind=asked_kind)
         return Answer(
             kind="query",
             headline=f"記録が1件も無い{what}は {len(blank)}件です。"
@@ -336,41 +364,65 @@ def answer(
             subjects=blank,
         )
 
-    if _has(text, "切れ", "超過", "期限切れ", "過ぎ"):
-        rows = [r for r in build_rows(ledger, today) if r.status == "overdue"]
-        return Answer(
-            kind="query",
-            headline=f"期限が切れているものが {len(rows)}件あります。"
-            if rows
-            else "期限が切れているものはありません。",
-            rows=rows,
-        )
-
+    # 期間の指定を先に見る。「30日以内に切れるものは？」には「切れ」が
+    # 入っているので、期限切れの照会を先に置くとそちらに捕まる。
+    # 実際そうなっていて、12日後に期限が来る健診ではなく期限切れの
+    # 資格者証を返していた。件数がたまたま同じだったので、
+    # 件数だけを見ていたテストは通り続けていた。
     days = None
     m = re.search(r"(\d{1,3})\s*日", text)
     if m and _has(text, "以内", "うち", "近い", "間近", "先"):
         days = int(m.group(1))
-    elif _has(text, "間近", "近い", "もうすぐ", "今月"):
+    elif _has(text, "間近", "近い", "もうすぐ"):
         days = ledger.soon_days
 
     if days is not None:
         limit = today + timedelta(days=days)
         rows = [
             r
-            for r in build_rows(ledger, today)
+            for r in _scoped_rows(ledger, today, asked_kind)
             if r.due_on is not None and today <= r.due_on <= limit
         ]
         return Answer(
             kind="query",
-            headline=f"{days}日以内に期限が来るものが {len(rows)}件あります。"
+            headline=f"{days}日以内に期限が来る{what}が {len(rows)}件あります。"
             if rows
-            else f"{days}日以内に期限が来るものはありません。",
+            else f"{days}日以内に期限が来る{what}はありません。",
+            rows=rows,
+        )
+
+    if _has(text, "今月"):
+        # 「今月」は「今から30日」ではない。8月30日に聞かれたら
+        # 8月31日までを指す。推測で30日に置き換えない。
+        last = date(today.year, today.month,
+                    calendar.monthrange(today.year, today.month)[1])
+        rows = [
+            r
+            for r in _scoped_rows(ledger, today, asked_kind)
+            if r.due_on is not None and today <= r.due_on <= last
+        ]
+        return Answer(
+            kind="query",
+            headline=f"今月（{last} まで）に期限が来る{what}が {len(rows)}件あります。"
+            if rows
+            else f"今月（{last} まで）に期限が来る{what}はありません。",
+            rows=rows,
+        )
+
+    if _has(text, "切れ", "超過", "期限切れ", "過ぎ"):
+        rows = [r for r in _scoped_rows(ledger, today, asked_kind)
+                if r.status == "overdue"]
+        return Answer(
+            kind="query",
+            headline=f"期限が切れている{what}が {len(rows)}件あります。"
+            if rows
+            else f"期限が切れている{what}はありません。",
             rows=rows,
         )
 
     if _has(text, "日付未入力", "未確定", "分からない", "計算できない"):
-        rows = [r for r in build_rows(ledger, today) if r.blocks_assignment
-                and r.due_on is None]
+        rows = [r for r in _scoped_rows(ledger, today, asked_kind)
+                if r.blocks_assignment and r.due_on is None]
         # 何を入れれば確定するかは、期限の決まり方で違う。
         # 周期型は前回実施日、固定型は証に書かれた有効期限。
         # まとめて「前回の日付」と言うと、免許証に前回実施日を探させる。
