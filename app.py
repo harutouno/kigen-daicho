@@ -37,6 +37,8 @@ from core.review import (
     summarize_by_subject,
     unrecorded_subjects,
 )
+from core.assistant import CAPABILITIES
+from core.assistant import answer as assistant_answer
 from core.schedule import ScheduleError, add_months, validate_done_on
 from core.store import SEED_PATH, load_ledger
 
@@ -51,6 +53,7 @@ PAGE_PEOPLE = "社員の資格・健診"
 PAGE_ASSETS = "道具・機器の点検"
 PAGE_SUBMISSION = "安全書類の提出前チェック"
 PAGE_TYPES = "種類の設定"
+PAGE_AI = "AIサポート"
 
 SECTIONS: list[tuple[str, str, str]] = [
     ("overdue", "期限切れ", "期限を過ぎています"),
@@ -125,6 +128,12 @@ if _show_all_key:
 # 次の実行に持ち越して表示する。何も言われないと、記録できたのか分からない。
 _flash = st.session_state.pop("_flash", None)
 
+# AIサポートの例を押したときも同じ。入力欄はキーを持っているので value では
+# 入らない。次の実行の先頭で、入力欄の値そのものを書き換える。
+_ai_example = st.session_state.pop("_ai_example", None)
+if _ai_example is not None:
+    st.session_state["ai-question"] = _ai_example
+
 
 # --- 左サイドバー ---------------------------------------------------------
 
@@ -135,7 +144,7 @@ with st.sidebar:
     st.markdown("**メニュー**")
     nav = st.radio(
         "メニュー",
-        [PAGE_PEOPLE, PAGE_ASSETS, PAGE_SUBMISSION, PAGE_TYPES],
+        [PAGE_PEOPLE, PAGE_ASSETS, PAGE_SUBMISSION, PAGE_TYPES, PAGE_AI],
         label_visibility="collapsed",
         key="nav",
     )
@@ -1786,6 +1795,113 @@ def page_edit_subject() -> None:
     )
 
 
+# --- AIサポート -------------------------------------------------------------
+
+# 本物の AI へ接続するかどうか。公開デモでは閉じておく。
+#
+# いまの判定は、打たれた言葉から意図を読み取る仕組みで動いており、外部へは
+# 一切つながらない。ここを開けると、同じ入口のまま本物の応答に差し替えられる。
+# ただし「答えは台帳の関数から作る」という決まりは変えない。文章を自由に
+# 生成させると、画面が3件と言っているのに4件と答える、という食い違いが起きる。
+AI_API_ENABLED = False
+
+
+def page_ai() -> None:
+    st.title(PAGE_AI)
+    st.caption(
+        "台帳について質問できます。操作の場所も案内します。"
+        "答えはすべて台帳の記録から作っているので、画面の表示と食い違いません。"
+    )
+
+    question = st.text_input(
+        "聞きたいこと",
+        placeholder="例）期限が切れているものを教えて",
+        label_visibility="collapsed",
+        key="ai-question",
+    )
+
+    st.markdown("**こう聞けます**")
+    cols = st.columns(2)
+    for i, example in enumerate(CAPABILITIES):
+        if cols[i % 2].button(example, key=f"ai-ex-{i}", width="stretch"):
+            st.session_state["_ai_example"] = example
+            st.rerun()
+
+    if not question.strip():
+        st.info(
+            "上の例を押すか、聞きたいことを入力してください。",
+            icon="💬",
+        )
+        return
+
+    result = assistant_answer(lg, question, today)
+
+    st.divider()
+
+    if result.kind == "unknown":
+        st.warning(result.headline, icon="🤔")
+        for line in result.lines:
+            st.write(line)
+        st.caption(
+            "※ 近いものを推測して答えることはしません。"
+            "台帳の表示と食い違う答えを出すのが、一番困るためです。"
+        )
+        return
+
+    if result.kind == "guide":
+        st.success(result.headline, icon="👉")
+        for i, line in enumerate(result.lines, start=1):
+            st.write(f"{i}. {line}")
+        if result.highlight:
+            # 押す先そのものを光らせる。
+            st.markdown(ui.highlight(result.highlight), unsafe_allow_html=True)
+            st.caption(
+                "※ 左の画面で、押す場所をオレンジ色で示しています。"
+                "こちらでは押しません。ご自身で押してください。"
+            )
+        return
+
+    # 照会の答え
+    st.info(result.headline, icon="📋")
+    for line in result.lines:
+        st.write(line)
+
+    if result.rows:
+        st.markdown(ui.section("該当するもの", len(result.rows), "件"),
+                    unsafe_allow_html=True)
+        widths = [1.6, 2.2, 1.3, 1.8]
+        header = st.columns(widths)
+        for slot, label in zip(header, ["対象", "種類", "状態", "期限・状況"]):
+            slot.caption(f"**{label}**")
+        for row in result.rows[:30]:
+            cols = st.columns(widths)
+            cols[0].write(row.subject.name)
+            cols[1].write(row.requirement.name)
+            cols[2].markdown(state_label(row), unsafe_allow_html=True)
+            cols[3].write(reason_text(row))
+        if len(result.rows) > 30:
+            st.caption(f"※ 先頭30件だけ出しています（全{len(result.rows)}件）。")
+
+    if result.subjects:
+        st.markdown(ui.section("記録が1件も無いもの", len(result.subjects), "件"),
+                    unsafe_allow_html=True)
+        for s in result.subjects:
+            is_a = s.kind == "asset"
+            label = f"{s.name}（{s.code}）" if is_a else s.name
+            st.write(f"　・{label}　:gray[{s.site} ／ {s.role}]")
+
+    st.caption(
+        "※ この答えは台帳の判定関数から作っています。"
+        "各画面で同じ条件を指定すれば、同じ結果になります。"
+    )
+
+    if not AI_API_ENABLED:
+        st.caption(
+            "※ 外部の AI サービスには接続していません。"
+            "打たれた言葉から意図を読み取る仕組みで動いています。"
+        )
+
+
 # --- 振り分け -------------------------------------------------------------
 
 if st.session_state.get("editing"):
@@ -1802,6 +1918,8 @@ elif nav == PAGE_SUBMISSION:
     page_submission()
 elif nav == PAGE_TYPES:
     page_types()
+elif nav == PAGE_AI:
+    page_ai()
 else:
     st.title(nav)
     st.info(

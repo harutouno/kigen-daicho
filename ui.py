@@ -187,6 +187,25 @@ def tile(state: str, count: int, note: str, unit: str = "人") -> str:
     )
 
 
+def highlight(key: str) -> str:
+    """指定した要素だけを光らせる CSS。
+
+    文章で「左の◯◯を押してください」と言っても、どこにあるか分からない人がいる。
+    押す先そのものを示す。Streamlit は key を付けた要素に st-key-<key> の class を
+    振るので、そこへ当てる（別の要素に及ばないことは実測で確認している）。
+    """
+    return f"""
+<style>
+[class*="st-key-{key}"] {{
+  outline: 3px solid #F59E0B !important;
+  outline-offset: 3px;
+  border-radius: 10px;
+  box-shadow: 0 0 0 6px rgba(245, 158, 11, .18) !important;
+}}
+</style>
+"""
+
+
 def section(title: str, count: int, unit: str = "人") -> str:
     """セクション見出しの HTML。件数を添え、右へ罫線を伸ばす。"""
     return (
