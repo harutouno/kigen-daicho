@@ -301,6 +301,65 @@ DETAIL_TILES = [
 ]
 
 
+def draw_delete_block(subject, is_asset: bool) -> None:
+    """対象を台帳から消す。
+
+    取り返しがつかない操作なので、押した直後には消さない。
+    何が一緒に消えるのかを数えて見せ、もう一度押させる。
+    記録も一緒に消えることを、数字で示してから確認する。
+    """
+    what = "道具・機器" if is_asset else "社員"
+    holdings = [h for h in lg.holdings if h.subject_id == subject.id]
+    records = sum(len(h.records) for h in holdings)
+
+    st.divider()
+
+    if st.session_state.get("deleting") != subject.id:
+        left, _ = st.columns([1, 3])
+        if left.button(
+            f"この{what}を台帳から消す",
+            key="btn-delete-open",
+            width="stretch",
+        ):
+            st.session_state["deleting"] = subject.id
+            st.rerun()
+        st.caption(
+            "退職や廃棄で台帳から外す場合に使います。押すとすぐには消えず、"
+            "何が一緒に消えるかを確認してから実行します。"
+        )
+        return
+
+    with st.container(border=True):
+        st.error(
+            f"「{subject.name}」を台帳から消します。取り消せません。",
+            icon="⚠️",
+        )
+        st.write("一緒に消えるもの")
+        st.write(f"　・登録されている項目　{len(holdings)}件")
+        st.write(f"　・実施・点検の記録　　{records}件")
+        if records:
+            st.caption(
+                "記録は追記のみで残してきたものです。消すと履歴もたどれなくなります。"
+                "退職者の記録を残しておきたい場合は、消さずに置いておくこともできます。"
+            )
+
+        do, cancel = st.columns([1, 2])
+        if do.button("消す", type="primary", width="stretch", key="btn-delete-do"):
+            lg.holdings = [h for h in lg.holdings if h.subject_id != subject.id]
+            lg.subjects = [s for s in lg.subjects if s.id != subject.id]
+            for key in ("deleting", "selected", "selected_holding", "editing"):
+                st.session_state.pop(key, None)
+            st.session_state["_flash"] = (
+                f"「{subject.name}」を台帳から消しました。"
+                f"（項目 {len(holdings)}件、記録 {records}件も一緒に消えました）"
+            )
+            st.rerun()
+
+        if cancel.button("やめる", width="stretch", key="btn-delete-cancel"):
+            st.session_state.pop("deleting", None)
+            st.rerun()
+
+
 def draw_detail(kind: str) -> None:
     """選んだ 1 件の詳細。一覧とは別の画面として出す。"""
     is_asset = kind == "asset"
@@ -468,6 +527,8 @@ def draw_detail(kind: str) -> None:
         "予定を実績として扱うと、超過が隠れてしまうためです。"
     )
 
+    draw_delete_block(selected, is_asset)
+
 
 # 修了証などの画像を預かる機能。公開デモでは閉じておく。
 #
@@ -476,6 +537,29 @@ def draw_detail(kind: str) -> None:
 # 入れ直さないよう、既定では受け付けない。実運用で開けるなら、アクセス制御と
 # 保存期間の設計が別に要る。
 ATTACHMENTS_ENABLED = False
+
+# 証の写真から日付を読み取る機能。公開デモでは閉じておく。
+#
+# 読み取れなかった項目は空欄のままにする。推測で埋めると、人が埋まっている欄を
+# そのまま通してしまい、目視確認が形だけになる。
+# 読み取った値もそのままは保存せず、必ず人が確定させる。
+PHOTO_READING_ENABLED = False
+
+
+def build_certificate_reader():
+    """読み取り役を選ぶ。既定はモックで、外部へはつながらない。
+
+    本物（ClaudeCertificateReader）は未検証。API キーが無いため、実際に
+    呼び出して動くことを確認していない。
+    """
+    from core.certificate_reader import (
+        ClaudeCertificateReader,
+        MockCertificateReader,
+    )
+
+    if AI_API_ENABLED:
+        return ClaudeCertificateReader()
+    return MockCertificateReader()
 
 
 def next_actions(row: Row) -> list[str]:
@@ -803,6 +887,38 @@ def draw_add_form(subject, rows: list[Row], is_asset: bool) -> None:
 
         if req.date_mode == "fixed":
             st.write("証に記載されている有効期限を入力してください。")
+
+            # 写真から読み取って、欄に入れておく。確定させるのは人。
+            read = st.file_uploader(
+                "証の写真から読み取る（任意）",
+                type=["png", "jpg", "jpeg"],
+                key="add-photo",
+                disabled=not PHOTO_READING_ENABLED,
+            )
+            if PHOTO_READING_ENABLED and read is not None:
+                got = build_certificate_reader().read(read.getvalue(), read.name)
+                if got.expiry_on is not None:
+                    st.session_state.setdefault("add-fixed-due", got.expiry_on)
+                    st.info(
+                        f"写真から {jp_date(got.expiry_on)} と読み取りました。"
+                        "現物と見比べてから「追加する」を押してください。",
+                        icon="📷",
+                    )
+                else:
+                    st.warning(
+                        "写真からは日付を読み取れませんでした。"
+                        "空欄のままにしてあります。手で入力してください。",
+                        icon="📷",
+                    )
+                if got.note:
+                    st.caption(got.note)
+            elif not PHOTO_READING_ENABLED:
+                st.caption(
+                    "※ 写真からの読み取りは公開デモでは無効にしています。"
+                    "証には氏名・生年月日・証番号が写るため、誰でも触れる状態で"
+                    "本物を預かることを避けています。"
+                )
+
             fixed_due = st.date_input(
                 "有効期限", value=None, key="add-fixed-due"
             )
@@ -1800,10 +1916,27 @@ def page_edit_subject() -> None:
 # 本物の AI へ接続するかどうか。公開デモでは閉じておく。
 #
 # いまの判定は、打たれた言葉から意図を読み取る仕組みで動いており、外部へは
-# 一切つながらない。ここを開けると、同じ入口のまま本物の応答に差し替えられる。
-# ただし「答えは台帳の関数から作る」という決まりは変えない。文章を自由に
-# 生成させると、画面が3件と言っているのに4件と答える、という食い違いが起きる。
+# 一切つながらない。ここを True にすると core/intent_llm.py 経由で
+# 言い換えだけを外部の AI に頼む。答えは相変わらず台帳の関数から作る。
+#
+# **この経路は未検証。** API キーが無いため、実際に呼び出して動くことを
+# 確認していない。書いてあるだけで、動作を保証しない。
 AI_API_ENABLED = False
+
+
+def build_normalizer():
+    """言い換え役。無効なとき、SDK が無いときは None（従来どおり動く）。"""
+    if not AI_API_ENABLED:
+        return None
+    from core import intent_llm
+
+    if not intent_llm.is_available():
+        return None
+
+    def call(question: str) -> str | None:
+        return intent_llm.normalize(question, today_text=jp_date(today))
+
+    return call
 
 
 def page_ai() -> None:
@@ -1834,7 +1967,14 @@ def page_ai() -> None:
         )
         return
 
-    result = assistant_answer(lg, question, today)
+    normalizer = build_normalizer()
+    try:
+        result = assistant_answer(lg, question, today, normalizer=normalizer)
+    except Exception as e:  # noqa: BLE001
+        # 外部への問い合わせが失敗しても、こちら側の判定は使える。
+        # 黙って握り潰さず、失敗したことを見せたうえで従来どおり答える。
+        st.warning(f"外部への問い合わせに失敗しました：{e}", icon="⚠️")
+        result = assistant_answer(lg, question, today)
 
     st.divider()
 
@@ -1899,6 +2039,8 @@ def page_ai() -> None:
         st.caption(
             "※ 外部の AI サービスには接続していません。"
             "打たれた言葉から意図を読み取る仕組みで動いています。"
+            "接続する場合も、外部に頼むのは言い換えだけで、"
+            "答えの数字と名前は台帳から出します。"
         )
 
 

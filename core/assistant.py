@@ -103,8 +103,19 @@ def _find_subject(ledger: Ledger, text: str) -> Subject | None:
     return best
 
 
-def answer(ledger: Ledger, question: str, today: date) -> Answer:
-    """打たれた文から、答えを組み立てる。"""
+def answer(
+    ledger: Ledger,
+    question: str,
+    today: date,
+    *,
+    normalizer=None,
+) -> Answer:
+    """打たれた文から、答えを組み立てる。
+
+    normalizer を渡すと、こちらで判定できなかったときに一度だけ言い換えを頼む。
+    言い換えても分からなければ、そのまま「答えられません」を返す。
+    言い換え役に答えそのものを作らせないのは、台帳の判定と食い違わせないため。
+    """
     text = question.strip()
     if not text:
         return Answer(
@@ -305,6 +316,22 @@ def answer(ledger: Ledger, question: str, today: date) -> Answer:
 
     # --- 分からないとき --------------------------------------------------
     # 一番近そうな答えを推測して返さない。台帳の判定と食い違う答えを出すのが最悪。
+
+    if normalizer is not None:
+        canonical = normalizer(text)
+        if canonical:
+            # 言い換えた文でもう一度だけ判定する。無限に回さないよう、
+            # ここでは normalizer を渡さない。
+            again = answer(ledger, canonical, today)
+            if again.kind != "unknown":
+                return Answer(
+                    kind=again.kind,
+                    headline=again.headline,
+                    lines=[f"（「{canonical}」として受け取りました）"] + again.lines,
+                    highlight=again.highlight,
+                    rows=again.rows,
+                    subjects=again.subjects,
+                )
 
     return Answer(
         kind="unknown",

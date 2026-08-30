@@ -143,3 +143,43 @@ def test_案内は書き込みを行わない():
     for q in ("社員を登録したい", "実施を記録したい", "期限が切れているものを教えて"):
         answer(lg, q, TODAY)
     assert (len(lg.subjects), len(lg.holdings)) == before
+
+
+# --- 言い換え役を差し込んだ場合 -------------------------------------------
+
+
+def test_言い換えられれば答えられる():
+    """言い換え役は言い換えるだけ。件数は台帳から出る。"""
+    lg = make_ledger()
+
+    def fake(_q: str) -> str:
+        return "期限が切れているものを教えて"
+
+    a = answer(lg, "うちでやばいのある？", TODAY, normalizer=fake)
+    assert a.kind == "query"
+    assert "言い換え" not in a.headline
+    assert "として受け取りました" in a.lines[0]
+    assert len(a.rows) == 1
+
+
+def test_言い換えられなければ答えられないと言う():
+    lg = make_ledger()
+
+    def fake(_q: str) -> None:
+        return None
+
+    a = answer(lg, "今日の天気は？", TODAY, normalizer=fake)
+    assert a.kind == "unknown"
+
+
+def test_言い換え役が嘘の答えを返しても件数は台帳から出る():
+    """言い換え役が『5件です』のような文を返しても、それは答えにならない。"""
+    lg = make_ledger()
+
+    def fake(_q: str) -> str:
+        return "期限が切れているものを教えて（5件です）"
+
+    a = answer(lg, "なんか教えて", TODAY, normalizer=fake)
+    # 台帳の実数は 1 件。言い換え役の言う 5 件にはならない。
+    assert len(a.rows) == 1
+    assert "5件" not in a.headline
