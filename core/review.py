@@ -34,6 +34,8 @@ __all__ = [
     "build_rows",
     "summarize_by_subject",
     "submission_check",
+    "SubmissionResult",
+    "preflight_check",
     "unrecorded_subjects",
     "assignment_check",
     "summarize",
@@ -269,6 +271,55 @@ def unrecorded_subjects(
             continue
         out.append(subject)
     return out
+
+
+@dataclass(frozen=True)
+class SubmissionResult:
+    """ある提出日で、書類を止めるものをまとめた結果。
+
+    件数を数える場所を 1 つにするために作った。
+    以前は画面が「行の検査 + 記録が無い対象」を足して数え、README の統計は
+    行の検査だけを数えていた。同じ「引っかかる件数」という言葉で、
+    画面は 14 件、README は 12 件を指していた。しかもその 12 件を
+    テストが正しい値として固定していた。
+
+    数え方を各所で書くと、こうして静かにずれる。結果をここで作り、
+    画面・AI・README の統計はすべてこれを読む。
+    """
+
+    target_date: date
+    issues: list[Row]
+    unrecorded: list[Subject]
+
+    @property
+    def blocked(self) -> int:
+        """その日に提出すると引っかかる件数。"""
+        return len(self.issues) + len(self.unrecorded)
+
+    @property
+    def is_clear(self) -> bool:
+        return self.blocked == 0
+
+
+def preflight_check(
+    ledger: Ledger,
+    *,
+    target_date: date,
+    subject_ids: list[str] | None = None,
+) -> SubmissionResult:
+    """提出日を指定して、書類を止めるものをすべて集める。
+
+    止まる理由は 2 種類ある。どちらか片方だけを見ると取りこぼす。
+
+    - 期限切れ・期日未確定（行の検査で見つかる）
+    - 記録が 1 件も無く、判断のしようがない（行が作られないので見つからない）
+    """
+    return SubmissionResult(
+        target_date=target_date,
+        issues=submission_check(ledger, target_date=target_date,
+                                subject_ids=subject_ids),
+        unrecorded=unrecorded_subjects(ledger, subject_ids=subject_ids),
+    )
 
 
 def assignment_check(

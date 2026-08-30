@@ -220,3 +220,74 @@ def test_N日後はそのまま日数で数える():
     from core.assistant import _parse_date
 
     assert _parse_date("30日後に出す", TODAY) == date(2026, 9, 28)
+
+
+# --- 対象を取り違えない ---------------------------------------------------
+
+
+def test_同姓同名は片方を選ばずに聞き返す():
+    """画面は ID で扱うよう直したのに、AI だけ名前で当てていた。
+
+    片方を選ぶと、期限切れの方を黙って外して
+    「対応は必要ありません」と答えうる。
+    """
+    lg = make_ledger()
+    lg.subjects.append(Subject(id="p9", name="迫田 和樹", kind="person",
+                               code="E-0099", site="奄美支店"))
+    a = answer(lg, "迫田 和樹さんは大丈夫？", TODAY)
+
+    assert a.kind == "unknown"
+    assert "2人" in a.headline
+    assert a.rows == []
+    # どちらか選べるように、手がかりを見せること
+    assert any("E-0001" in line for line in a.lines)
+    assert any("E-0099" in line for line in a.lines)
+
+
+def test_社員番号を付ければ答えられる():
+    lg = make_ledger()
+    lg.subjects.append(Subject(id="p9", name="迫田 和樹", kind="person",
+                               code="E-0099", site="奄美支店"))
+    a = answer(lg, "E-0099 の迫田 和樹さんは大丈夫？", TODAY)
+    assert a.kind == "query"
+
+
+def test_人を聞かれて道具を混ぜない():
+    """件数がそのまま食い違う。"""
+    lg = make_ledger()
+    lg.subjects.append(Subject(id="p3", name="新入 太郎", kind="person"))
+    lg.subjects.append(Subject(id="a1", name="絶縁手袋 新品", kind="asset",
+                               code="GLO-9"))
+
+    a = answer(lg, "資格情報が無い人は？", TODAY)
+    assert {s.kind for s in a.subjects} == {"person"}
+    assert "新入 太郎" in [s.name for s in a.subjects]
+
+    b = answer(lg, "点検情報が無い道具は？", TODAY)
+    assert [s.name for s in b.subjects] == ["絶縁手袋 新品"]
+
+    # どちらとも取れない聞き方なら、決めつけずに両方返す
+    c = answer(lg, "登録されていないものは？", TODAY)
+    assert {s.kind for s in c.subjects} == {"person", "asset"}
+
+
+def test_固定期限に前回実施日を探させない():
+    """免許証に「前回の実施日」は無い。あるのは証に書かれた有効期限。"""
+    lg = Ledger(
+        requirements=[
+            Requirement(id="men", name="運転免許証", category="qualification",
+                        obligation="legal", date_mode="fixed"),
+            Requirement(id="k", name="定期健康診断", category="qualification",
+                        obligation="legal", date_mode="cycle", cycle_months=12),
+        ],
+        subjects=[Subject(id="p1", name="甲", kind="person")],
+        holdings=[Holding(id="h1", subject_id="p1", requirement_id="men"),
+                  Holding(id="h2", subject_id="p1", requirement_id="k")],
+    )
+    a = answer(lg, "日付未入力のものは？", TODAY)
+
+    assert "前回の日付" not in a.headline
+    assert len(a.rows) == 2
+    joined = "".join(a.lines)
+    assert "前回の実施日が未入力：1件" in joined
+    assert "有効期限が未入力：1件" in joined

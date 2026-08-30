@@ -229,3 +229,33 @@ def test_古い実施日を後から追加しても次回期日は後退しな�
     assert next_due(
         last_done_on=latest_done(after_late_entry), cycle_months=12
     ) == date(2027, 8, 20)
+
+
+# --- 業務上の今日 ---------------------------------------------------------
+
+
+def test_業務上の今日は日本時間で決まる():
+    """公開しているデモは協定世界時で動いている。
+
+    date.today() をそのまま使うと、日本の朝9時より前は前日を指す。
+    期限当日を境界として厳密に扱っているので、1日のずれが
+    そのまま「期限切れ」と「まだ有効」の差になる。
+    """
+    from datetime import datetime, timezone
+
+    from core.schedule import BUSINESS_TZ, business_today
+
+    # 日本時間 2026-08-31 00:30 は、協定世界時ではまだ 08-30 15:30
+    jst_midnight = datetime(2026, 8, 31, 0, 30, tzinfo=BUSINESS_TZ)
+    assert jst_midnight.astimezone(timezone.utc).date() == date(2026, 8, 30)
+    assert jst_midnight.date() == date(2026, 8, 31)
+
+    # 実際の呼び出しが日本時間の日付と一致すること
+    assert business_today() == datetime.now(BUSINESS_TZ).date()
+
+
+def test_境界の1日ずれが判定を変えてしまうこと():
+    """なぜ日付のずれを気にするのか、を残しておく。"""
+    due = date(2026, 8, 31)
+    assert status_of(due, date(2026, 8, 31)) == "due_soon"   # 当日はまだ切れていない
+    assert status_of(due, date(2026, 9, 1)) == "overdue"     # 翌日は切れている

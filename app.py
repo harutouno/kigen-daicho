@@ -36,13 +36,14 @@ from core.review import (
     Row,
     SubjectSummary,
     build_rows,
+    preflight_check,
     submission_check,
     summarize_by_subject,
     unrecorded_subjects,
 )
 from core.assistant import CAPABILITIES
 from core.assistant import answer as assistant_answer
-from core.schedule import ScheduleError, add_months, validate_done_on
+from core.schedule import ScheduleError, add_months, business_today, validate_done_on
 from core.store import SEED_PATH, load_ledger
 
 import ui
@@ -207,7 +208,7 @@ with st.sidebar:
 
 
 lg = ledger()
-today = date.today()
+today = business_today()
 
 
 # --- 社員の資格・健診 -----------------------------------------------------
@@ -658,6 +659,15 @@ def next_actions(row: Row) -> list[str]:
         ]
 
     if row.status == "due_soon":
+        if row.requirement.date_mode == "fixed":
+            # 固定期限の画面に「実施を記録する」は無い。あるのは
+            # 「新しい有効期限を登録する」。無い操作を案内すると、
+            # 探して見つからず、そこで止まる。
+            return [
+                "更新の手続きを行う",
+                "新しい証を受け取る",
+                "下の「新しい有効期限を登録する」に、証に書かれた期限を入力する",
+            ]
         return [
             "受講・点検の予約を取る",
             "「次回予定日」に予約した日を入力する",
@@ -1519,9 +1529,10 @@ def page_submission() -> None:
         st.warning("過去の日付が入っています。これから提出する日を入れてください。")
         return
 
-    issues = submission_check(lg, target_date=target_date, subject_ids=subject_ids)
-    # 行の検査だけでは、記録が 1 件も無い人を見逃す。行が作られないため。
-    blank = unrecorded_subjects(lg, subject_ids=subject_ids)
+    # 件数の数え方は core に 1 つだけ置く。画面で足し算をすると、
+    # README の統計や AI の答えと静かにずれる。
+    result = preflight_check(lg, target_date=target_date, subject_ids=subject_ids)
+    issues, blank = result.issues, result.unrecorded
 
     who = f"選んだ{len(picked)}人" if picked else f"社員全員（{len(people)}人）"
     what = (
@@ -1531,7 +1542,7 @@ def page_submission() -> None:
     )
     st.caption(f"対象：{who}　／　{what}")
 
-    if not issues and not blank:
+    if result.is_clear:
         st.success(
             f"{jp_date(target_date)} 時点で、登録されている情報の中に"
             "書類を止める項目はありません。",
@@ -1554,7 +1565,7 @@ def page_submission() -> None:
 
     st.error(
         f"{jp_date(target_date)} に提出すると、"
-        f"{len(issues) + len(blank)}件が引っかかります。",
+        f"{result.blocked}件が引っかかります。",
         icon="⚠️",
     )
 
@@ -1657,7 +1668,9 @@ def page_types() -> None:
         with right:
             st.caption(
                 f"いまは期限の{lg.soon_days}日前から「期限間近」として扱っています。"
-                "この日数を変えると、社員の一覧と提出前チェックの結果がすぐに変わります。"
+                "この日数を変えると、社員と道具の一覧で「期限間近」と出る範囲が変わります。"
+                "提出前チェックが止めるのは期限切れと期日未確定なので、"
+                "この日数を変えても提出できるかどうかは変わりません。"
             )
         if soon != lg.soon_days:
             lg.set_soon_days(int(soon))

@@ -16,8 +16,9 @@ from __future__ import annotations
 
 import calendar
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from typing import Iterable, Literal
+from zoneinfo import ZoneInfo
 
 __all__ = [
     "ScheduleError",
@@ -29,7 +30,25 @@ __all__ = [
     "days_left",
     "status_of",
     "NO_DEADLINE",
+    "BUSINESS_TZ",
+    "business_today",
 ]
+
+# この台帳を使うのは日本の事業所なので、「今日」は日本時間で決める。
+# 実行しているサーバーの時計に任せると、置き場所によって 1 日ずれる。
+# 期限当日を境界として厳密に扱っているため、1 日のずれがそのまま
+# 「期限切れ」と「まだ有効」の差になる。
+BUSINESS_TZ = ZoneInfo("Asia/Tokyo")
+
+
+def business_today() -> date:
+    """業務上の今日。日本時間で決める。
+
+    date.today() は実行環境のローカル日付を返す。公開しているデモは
+    協定世界時で動いており、日本の朝 9 時より前は前日を指す。
+    その時間帯に見ると、期限当日のものが「まだ 1 日ある」と表示される。
+    """
+    return datetime.now(BUSINESS_TZ).date()
 
 
 class ScheduleError(ValueError):

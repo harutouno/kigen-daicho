@@ -14,6 +14,7 @@ from core.models import Holding, Ledger, Record, Requirement, Subject
 from core.review import (
     assignment_check,
     build_rows,
+    preflight_check,
     submission_check,
     summarize,
     summarize_by_subject,
@@ -597,3 +598,52 @@ def test_記録全体の最新日は表示のために残してある():
                          Record(done_on=date(2026, 1, 1))])
     assert h.last_done_on == date(2026, 1, 1)
     assert h.last_done_on_at(date(2025, 6, 1)) == date(2025, 1, 1)
+
+
+# --- 件数を数える場所を1つにする -------------------------------------------
+#
+# 以前は画面が「行の検査 + 記録が無い対象」を足して数え、README の統計は
+# 行の検査だけを数えていた。同じ「引っかかる件数」という言葉で、
+# 画面は 14 件、README は 12 件を指していた。しかもその 12 件を、
+# 私が書いたテストが正しい値として固定していた。
+# テストが通っていることは、正しいことの根拠にならない例だった。
+
+
+def test_止まる理由を両方数える():
+    lg = make_ledger()
+    # 記録が1件も無い人を足す。行が作られないので、行の検査では見えない。
+    lg.subjects.append(Subject(id="p9", name="新入 太郎", kind="person"))
+
+    result = preflight_check(lg, target_date=date(2027, 3, 31))
+    rows_only = submission_check(lg, target_date=date(2027, 3, 31))
+    blank_only = unrecorded_subjects(lg)
+
+    # 行の検査だけでは、記録が無い対象を数え落とす
+    assert result.blocked == len(rows_only) + len(blank_only)
+    assert result.blocked > len(rows_only)
+    assert "p9" in [s.id for s in result.unrecorded]
+    assert not result.is_clear
+
+
+def test_止まるものが無ければそう言える():
+    lg = Ledger(
+        requirements=[Requirement(id="k", name="健診", category="qualification",
+                                  obligation="legal", date_mode="cycle",
+                                  cycle_months=12)],
+        subjects=[Subject(id="p1", name="甲", kind="person")],
+        holdings=[Holding(id="h1", subject_id="p1", requirement_id="k",
+                          records=[Record(done_on=date(2026, 8, 1))])],
+    )
+    result = preflight_check(lg, target_date=date(2026, 9, 1))
+    assert result.is_clear
+    assert result.blocked == 0
+
+
+def test_対象を絞っても両方に効く():
+    lg = make_ledger()
+    lg.subjects.append(Subject(id="p9", name="新入 太郎", kind="person"))
+
+    result = preflight_check(lg, target_date=date(2027, 3, 31), subject_ids=["p9"])
+    assert result.issues == []
+    assert [s.id for s in result.unrecorded] == ["p9"]
+    assert result.blocked == 1

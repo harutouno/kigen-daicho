@@ -360,6 +360,7 @@ class Holding:
     # タプルで持つ。「追記のみ」を決まりごとで守らせるのではなく、型で守らせる。
     # リストのままだと holding.records.clear() ができてしまい、
     # 「消せない」と書いてあるのに消せる、という状態になる。
+    # 丸ごと差し替える holding.records = () は __setattr__ で止める。
     records: tuple[Record, ...] = ()
     note: str = ""
     # 受講や点検の予約が取れている場合の予定日。期日の計算には使わない。
@@ -370,7 +371,25 @@ class Holding:
     def __post_init__(self) -> None:
         # 読み込みや呼び出し側はリストで渡してくるので、ここで揃える。
         if not isinstance(self.records, tuple):
-            self.records = tuple(self.records)
+            self._set_records(tuple(self.records))
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        """記録の差し替えを外から行えないようにする。
+
+        タプルにしただけでは holding.records.clear() は防げても
+        holding.records = () は通ってしまい、「消せない」と書いてあるのに
+        履歴を丸ごと落とせる状態が残っていた。
+        足すのは add_record、直すのは correct_record を通す。
+        """
+        if name == "records" and "records" in self.__dict__:
+            raise LedgerDataError(
+                "記録は差し替えられません。"
+                "追加は add_record、訂正は correct_record を使ってください。"
+            )
+        super().__setattr__(name, value)
+
+    def _set_records(self, records: tuple[Record, ...]) -> None:
+        object.__setattr__(self, "records", records)
 
     @property
     def superseded_ids(self) -> frozenset[str]:
@@ -445,7 +464,7 @@ class Holding:
         過去を書き換えられる台帳は、監査のときに信用されない。
         間違えた場合は correct_record で訂正する。
         """
-        self.records = (*self.records, record)
+        self._set_records((*self.records, record))
 
     def correct_record(self, target_id: str, corrected: Record) -> None:
         """既にある記録を、新しい記録で置き換える。

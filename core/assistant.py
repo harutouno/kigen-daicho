@@ -106,15 +106,40 @@ def _parse_date(text: str, today: date) -> date | None:
     return None
 
 
-def _find_subject(ledger: Ledger, text: str) -> Subject | None:
-    """名前や管理番号で対象を探す。長い名前を優先して取り違えを避ける。"""
-    best: Subject | None = None
+def _asked_kind(text: str) -> str | None:
+    """社員のことを聞いているのか、道具のことを聞いているのか。
+
+    どちらとも取れない場合は None を返し、両方を対象にする。
+    決めつけて片方だけ返すと、聞かれていないものを見落とす。
+    """
+    if _has(text, "道具", "機器", "設備", "点検情報", "備品"):
+        return "asset"
+    if _has(text, "人", "社員", "従業員", "資格情報", "職員"):
+        return "person"
+    return None
+
+
+def _find_subjects(ledger: Ledger, text: str) -> list[Subject]:
+    """名前や管理番号に当てはまる対象をすべて返す。
+
+    1 人に絞り込まない。同姓同名がいるときに片方を選ぶと、
+    期限切れの方を黙って外して「問題ありません」と答えうる。
+    画面側は ID で扱うよう直したのに、ここだけ名前で当てていた。
+
+    長い手がかりで当たったものを優先する。「東 亮」と「東」が両方いるとき、
+    「東 亮さんは？」で両方返すと毎回聞き返すことになる。
+    """
+    hits: dict[str, tuple[int, Subject]] = {}
     for s in ledger.subjects:
-        for key in (s.name, s.name.replace(" ", ""), s.code):
+        for key in (s.code, s.name, s.name.replace(" ", "")):
             if key and key in text:
-                if best is None or len(key) > len(best.name):
-                    best = s
-    return best
+                length = len(key)
+                if s.id not in hits or length > hits[s.id][0]:
+                    hits[s.id] = (length, s)
+    if not hits:
+        return []
+    best = max(length for length, _ in hits.values())
+    return [s for length, s in hits.values() if length == best]
 
 
 def answer(
@@ -259,8 +284,21 @@ def answer(
             subjects=blank,
         )
 
-    subject = _find_subject(ledger, text)
-    if subject is not None:
+    found = _find_subjects(ledger, text)
+    if len(found) > 1:
+        # どちらのことか決めない。片方を選ぶと、期限切れの方を外して
+        # 「問題ありません」と答えることになる。
+        return Answer(
+            kind="unknown",
+            headline=f"「{found[0].name}」は {len(found)}人います。どちらか分かりません。",
+            lines=[
+                "社員番号か所属を付けて、もう一度聞いてください。",
+                *[f"・{s.name}（{s.code or '番号なし'}／{s.site or '所属なし'}）"
+                  for s in found],
+            ],
+        )
+    if found:
+        subject = found[0]
         summaries = {s.subject.id: s for s in summarize_by_subject(ledger, today)}
         s = summaries[subject.id]
         if s.worst == "unregistered":
@@ -285,13 +323,16 @@ def answer(
             rows=acting,
         )
 
-    if _has(text, "資格情報", "登録されていない", "何も無い", "空", "未登録"):
-        blank = unrecorded_subjects(ledger)
+    if _has(text, "資格情報", "点検情報", "登録されていない", "何も無い", "未登録"):
+        # 「人は？」と聞かれて道具を混ぜない。件数がそのまま食い違う。
+        kind = _asked_kind(text)
+        blank = unrecorded_subjects(ledger, kind=kind)
+        what = {"person": "社員", "asset": "道具・機器", None: "対象"}[kind]
         return Answer(
             kind="query",
-            headline=f"記録が1件も無い対象は {len(blank)}件です。"
+            headline=f"記録が1件も無い{what}は {len(blank)}件です。"
             if blank
-            else "記録が1件も無い対象はありません。",
+            else f"記録が1件も無い{what}はありません。",
             subjects=blank,
         )
 
@@ -330,11 +371,22 @@ def answer(
     if _has(text, "日付未入力", "未確定", "分からない", "計算できない"):
         rows = [r for r in build_rows(ledger, today) if r.blocks_assignment
                 and r.due_on is None]
+        # 何を入れれば確定するかは、期限の決まり方で違う。
+        # 周期型は前回実施日、固定型は証に書かれた有効期限。
+        # まとめて「前回の日付」と言うと、免許証に前回実施日を探させる。
+        cycle = [r for r in rows if r.requirement.date_mode == "cycle"]
+        fixed = [r for r in rows if r.requirement.date_mode == "fixed"]
+        lines = []
+        if cycle:
+            lines.append(f"前回の実施日が未入力：{len(cycle)}件")
+        if fixed:
+            lines.append(f"証に書かれた有効期限が未入力：{len(fixed)}件")
         return Answer(
             kind="query",
-            headline=f"前回の日付が入っていないものが {len(rows)}件あります。"
+            headline=f"期限を確定するための情報が入っていないものが {len(rows)}件あります。"
             if rows
-            else "前回の日付が入っていないものはありません。",
+            else "期限を確定するための情報が入っていないものはありません。",
+            lines=lines,
             rows=rows,
         )
 

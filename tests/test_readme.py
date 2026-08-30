@@ -40,15 +40,13 @@ def test_提出日ごとの件数が同梱データと一致する():
 
 
 def test_問題なしの人数が同梱データと一致する():
-    from datetime import date
-
     from core.review import summarize_by_subject
-    from core.store import load_ledger
+    from core.store import load_ledger, seed_generated_on
 
-    people = summarize_by_subject(load_ledger(), date.today(), kind="person")
+    people = summarize_by_subject(load_ledger(), seed_generated_on(), kind="person")
     ok = sum(1 for s in people if not s.needs_action)
 
-    written = re.search(r"今日の画面では(\d+)人中(\d+)人が「問題なし」", README)
+    written = re.search(r"画面では(\d+)人中(\d+)人が「問題なし」", README)
     assert written, "README に人数の記載がありません"
     assert (int(written.group(1)), int(written.group(2))) == (len(people), ok)
 

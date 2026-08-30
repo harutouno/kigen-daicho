@@ -269,3 +269,22 @@ def test_訂正の指し先が無ければ読み込みで止める():
 def test_対象の種別に知らない値があれば止める():
     with pytest.raises(LedgerDataError):
         Subject.from_dict({"id": "x", "name": "甲", "kind": "persno"})
+
+
+def test_記録を丸ごと差し替えられない():
+    """タプルにしただけでは holding.records = () が通ってしまい、
+    「消せない」と書いてあるのに履歴を丸ごと落とせる状態が残っていた。
+    """
+    h = Holding(id="h1", subject_id="p1", requirement_id="k",
+                records=[Record(done_on=date(2026, 1, 1))])
+
+    with pytest.raises(AttributeError):
+        h.records.append(Record(done_on=date(2026, 2, 1)))
+    with pytest.raises(AttributeError):
+        h.records.clear()
+    with pytest.raises(LedgerDataError):
+        h.records = ()
+
+    # 決められた入口からは足せる
+    h.add_record(Record(done_on=date(2026, 2, 1)))
+    assert len(h.records) == 2
