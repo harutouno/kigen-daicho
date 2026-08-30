@@ -17,6 +17,7 @@ from core.review import (
     submission_check,
     summarize,
     summarize_by_subject,
+    unrecorded_subjects,
 )
 from core.store import SEED_PATH, load_ledger
 
@@ -473,3 +474,58 @@ def test_間近の日数に0以下は拒否する():
     lg = make_ledger()
     with pytest.raises(ValueError):
         lg.set_soon_days(0)
+
+
+# --- 記録が 1 件も無い対象 -------------------------------------------------
+
+
+def test_記録が無い人は提出前チェックを素通りしてしまう():
+    """submission_check は行を見るため、行が無い対象は検出できない。
+
+    これは欠陥ではなく仕様の範囲の確認。行の検査だけでは足りないことを
+    はっきりさせるために書いている。補うのが unrecorded_subjects。
+    """
+    lg = make_ledger()
+    lg.subjects = [Subject(id="p1", name="新入", kind="person")]
+    lg.holdings = []
+
+    assert submission_check(lg, target_date=TODAY, subject_ids=["p1"]) == []
+
+
+def test_記録が無い対象を別に取り出せる():
+    lg = make_ledger()
+    lg.subjects = [
+        Subject(id="p1", name="新入", kind="person"),
+        Subject(id="p2", name="既存", kind="person"),
+        Subject(id="a1", name="新品の道具", kind="asset"),
+    ]
+    lg.holdings = [
+        Holding(id="h1", subject_id="p2", requirement_id="cert",
+                fixed_due_on=date(2027, 3, 31)),
+    ]
+
+    names = [s.name for s in unrecorded_subjects(lg)]
+    assert names == ["新入", "新品の道具"]
+
+
+def test_記録が無い対象を種類で絞れる():
+    lg = make_ledger()
+    lg.subjects = [
+        Subject(id="p1", name="新入", kind="person"),
+        Subject(id="a1", name="新品の道具", kind="asset"),
+    ]
+    lg.holdings = []
+
+    assert [s.name for s in unrecorded_subjects(lg, kind="person")] == ["新入"]
+    assert [s.name for s in unrecorded_subjects(lg, kind="asset")] == ["新品の道具"]
+
+
+def test_記録が無い対象を選んだ人だけに絞れる():
+    lg = make_ledger()
+    lg.subjects = [
+        Subject(id="p1", name="新入A", kind="person"),
+        Subject(id="p2", name="新入B", kind="person"),
+    ]
+    lg.holdings = []
+
+    assert [s.name for s in unrecorded_subjects(lg, subject_ids=["p2"])] == ["新入B"]

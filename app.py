@@ -35,6 +35,7 @@ from core.review import (
     build_rows,
     submission_check,
     summarize_by_subject,
+    unrecorded_subjects,
 )
 from core.schedule import ScheduleError, add_months, validate_done_on
 from core.store import SEED_PATH, load_ledger
@@ -1130,30 +1131,60 @@ def page_submission() -> None:
         )
 
     people = [s for s in lg.subjects if s.kind == "person"]
-    name_to_id = {s.name: s.id for s in people}
+    assets = [s for s in lg.subjects if s.kind == "asset"]
+    person_by_name = {s.name: s.id for s in people}
+    asset_by_name = {f"{s.name}（{s.code}）": s.id for s in assets}
 
     with target:
         st.markdown("**現場に出す人**")
-        st.caption("選ばなければ、全員を見ます")
+        st.caption("選ばなければ、社員全員を見ます")
         picked = st.multiselect(
             "現場に出す人",
-            list(name_to_id.keys()),
+            list(person_by_name.keys()),
             label_visibility="collapsed",
             key="submit-people",
         )
 
-    subject_ids = [name_to_id[n] for n in picked] if picked else None
+        st.markdown("**現場に持ち込む道具・機器**")
+        st.caption("選ばなければ、道具・機器すべてを見ます")
+        picked_assets = st.multiselect(
+            "現場に持ち込む道具・機器",
+            list(asset_by_name.keys()),
+            label_visibility="collapsed",
+            key="submit-assets",
+        )
+
+    # どちらも選ばれていなければ全件を見る。片方だけ選ばれた場合も、
+    # もう片方は全件のまま。選べる対象と、結果に出てくる対象を一致させる。
+    if picked or picked_assets:
+        subject_ids = (
+            [person_by_name[n] for n in picked]
+            + [asset_by_name[n] for n in picked_assets]
+        )
+        if not picked:
+            subject_ids += [s.id for s in people]
+        if not picked_assets:
+            subject_ids += [s.id for s in assets]
+    else:
+        subject_ids = None
 
     if target_date < today:
         st.warning("過去の日付が入っています。これから提出する日を入れてください。")
         return
 
     issues = submission_check(lg, target_date=target_date, subject_ids=subject_ids)
+    # 行の検査だけでは、記録が 1 件も無い人を見逃す。行が作られないため。
+    blank = unrecorded_subjects(lg, subject_ids=subject_ids)
 
-    scope_text = f"選んだ{len(picked)}人" if picked else f"全員（{len(people)}人）"
-    st.caption(f"対象：{scope_text}")
+    who = f"選んだ{len(picked)}人" if picked else f"社員全員（{len(people)}人）"
+    what = (
+        f"選んだ{len(picked_assets)}件"
+        if picked_assets
+        else f"道具・機器すべて（{len(assets)}件）"
+    )
+    st.caption(f"対象：{who}　／　{what}")
 
-    if not issues:
+    if not issues and not blank:
         st.success(
             f"{jp_date(target_date)} に提出しても、引っかかる項目はありません。",
             icon="✅",
@@ -1170,21 +1201,47 @@ def page_submission() -> None:
     upcoming = [r for r in issues if r.holding.id not in today_ids]
 
     st.error(
-        f"{jp_date(target_date)} に提出すると、{len(issues)}件が引っかかります。",
+        f"{jp_date(target_date)} に提出すると、"
+        f"{len(issues) + len(blank)}件が引っかかります。",
         icon="⚠️",
     )
 
     if upcoming:
-        st.markdown(f"##### 🟠 その日までに切れるもの　{len(upcoming)}件")
+        st.markdown(ui.section("その日までに切れるもの", len(upcoming), "件"),
+                    unsafe_allow_html=True)
         st.caption(
             "今日の時点ではまだ有効です。社員の一覧を見ているだけでは気づけません。"
         )
         draw_issue_group(upcoming)
 
     if already:
-        st.markdown(f"##### 🔴 今日すでに引っかかっているもの　{len(already)}件")
+        st.markdown(ui.section("今日すでに引っかかっているもの", len(already), "件"),
+                    unsafe_allow_html=True)
         st.caption("提出する日に関係なく、いま対応が必要です。")
         draw_issue_group(already)
+
+    if blank:
+        st.markdown(ui.section("情報が無く、判断できないもの", len(blank), "件"),
+                    unsafe_allow_html=True)
+        st.caption(
+            "記録が1件も登録されていません。問題が無いのではなく、"
+            "書類に載せてよいかどうかを判断できない状態です。"
+        )
+        for subject in blank:
+            is_a = subject.kind == "asset"
+            with st.container(border=True):
+                head, pill_col = st.columns([3, 1])
+                label = f"{subject.name}（{subject.code}）" if is_a else subject.name
+                head.markdown(f"**{label}**　:gray[{subject.site} ／ {subject.role}]")
+                pill_col.markdown(
+                    ui.pill(pill_key("unregistered", is_a), short=True),
+                    unsafe_allow_html=True,
+                )
+                st.write(
+                    "　・点検・校正を登録してから、書類を作成してください。"
+                    if is_a
+                    else "　・資格・講習・健診を登録してから、書類を作成してください。"
+                )
 
 
 # --- 種類の設定 -----------------------------------------------------------

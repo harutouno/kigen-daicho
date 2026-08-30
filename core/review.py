@@ -33,6 +33,7 @@ __all__ = [
     "build_rows",
     "summarize_by_subject",
     "submission_check",
+    "unrecorded_subjects",
     "assignment_check",
     "summarize",
 ]
@@ -231,6 +232,32 @@ def submission_check(
         allowed = set(subject_ids)
         rows = [r for r in rows if r.subject.id in allowed]
     return [r for r in rows if r.blocks_assignment]
+
+
+def unrecorded_subjects(
+    ledger: Ledger,
+    *,
+    subject_ids: list[str] | None = None,
+    kind: str | None = None,
+) -> list[Subject]:
+    """記録が 1 件も無い対象を返す。
+
+    submission_check は行（Subject × Requirement）を見るため、記録が 1 件も
+    無い対象は行が作られず、素通りしてしまう。それでは「何も分かっていない人」を
+    書類に載せてよいと答えることになる。行の検査とは別に、対象そのものを見る。
+    """
+    having = {h.subject_id for h in ledger.holdings}
+
+    out: list[Subject] = []
+    for subject in ledger.subjects:
+        if subject.id in having:
+            continue
+        if kind is not None and subject.kind != kind:
+            continue
+        if subject_ids is not None and subject.id not in subject_ids:
+            continue
+        out.append(subject)
+    return out
 
 
 def assignment_check(
